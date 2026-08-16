@@ -102,12 +102,16 @@ app.include_router(executive_kpi_router)
 app.include_router(presales_template_router)
 
 
+# @app.get("/")
+# def root():
+#     return {
+#         "message": "CRM for IT Services API is running",
+#         "status": "success",
+#     }
+
 @app.get("/")
 def root():
-    return {
-        "message": "CRM for IT Services API is running",
-        "status": "success",
-    }
+    return {"message": "backend version 2"}
 
 
 @app.get("/health")
@@ -132,7 +136,3 @@ def health_check():
             else "unavailable"
         ),
     }
-
-@app.get("/")
-def root():
-    return {"message": "backend version 2"}
