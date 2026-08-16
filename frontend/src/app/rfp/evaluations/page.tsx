@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -899,6 +901,7 @@ function EvaluationDetailsModal({
 /* ================================================= */
 
 export default function RfpEvaluationsPage() {
+  const confirm = useConfirm();
   const [
     evaluations,
     setEvaluations,
@@ -1233,7 +1236,7 @@ export default function RfpEvaluationsPage() {
       );
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete bid evaluation for "${
           rfp?.title ??
           `RFP #${evaluation.rfp_id}`

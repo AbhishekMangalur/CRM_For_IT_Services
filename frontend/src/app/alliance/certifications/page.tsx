@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -994,6 +996,7 @@ function CertificationDetailsModal({
 /* ================================================= */
 
 export default function AllianceCertificationsPage() {
+  const confirm = useConfirm();
   const [
     certifications,
     setCertifications,
@@ -1370,7 +1373,7 @@ export default function AllianceCertificationsPage() {
       );
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete certification "${certification.certification_name}" for "${
           employee?.full_name ??
           "this employee"

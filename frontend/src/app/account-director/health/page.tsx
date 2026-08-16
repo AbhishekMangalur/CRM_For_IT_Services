@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -635,6 +637,7 @@ function HealthDetailsModal({
 }
 
 export default function AccountDirectorHealthPage() {
+  const confirm = useConfirm();
   const [records, setRecords] = useState<
     CustomerHealthRecord[]
   >([]);
@@ -834,7 +837,7 @@ export default function AccountDirectorHealthPage() {
   async function handleDeleteRecord(
     record: CustomerHealthRecord,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete health record #${record.id}?`,
     );
 

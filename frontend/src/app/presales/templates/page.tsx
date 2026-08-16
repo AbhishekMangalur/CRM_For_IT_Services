@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
@@ -257,6 +259,7 @@ function TemplateDetailsModal({
 }
 
 export default function TemplateLibraryPage() {
+  const confirm = useConfirm();
   const [templates, setTemplates] = useState<PresalesTemplate[]>([]);
   const [users, setUsers] = useState<TemplateUser[]>([]);
   const [search, setSearch] = useState("");
@@ -336,7 +339,7 @@ export default function TemplateLibraryPage() {
   }
 
   async function handleDelete(template: PresalesTemplate) {
-    if (!window.confirm(`Delete template "${template.template_name}"?`)) return;
+    if (!await confirm(`Delete template "${template.template_name}"?`)) return;
     setError("");
     setSuccess("");
     try {

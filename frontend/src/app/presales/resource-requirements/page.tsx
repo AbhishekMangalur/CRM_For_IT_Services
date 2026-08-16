@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -897,6 +899,7 @@ function ResourceDetailsModal({
 }
 
 export default function PresalesResourceRequirementsPage() {
+  const confirm = useConfirm();
   const [resources, setResources] =
     useState<ResourceRequirement[]>([]);
 
@@ -1134,7 +1137,7 @@ export default function PresalesResourceRequirementsPage() {
   async function handleDeleteResource(
     resource: ResourceRequirement,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete resource requirement "${resource.role_name}"?`,
     );
 

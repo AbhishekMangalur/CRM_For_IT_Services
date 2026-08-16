@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -903,6 +905,7 @@ function EstimationDetailsModal({
 }
 
 export default function PresalesEstimationsPage() {
+  const confirm = useConfirm();
   const [
     estimations,
     setEstimations,
@@ -1125,7 +1128,7 @@ export default function PresalesEstimationsPage() {
     estimation: Estimation,
   ): Promise<void> {
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete estimation #${estimation.id}?`,
       );
 

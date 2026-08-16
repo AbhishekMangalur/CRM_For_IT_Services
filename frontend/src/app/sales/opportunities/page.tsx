@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -1010,6 +1012,7 @@ function OpportunityDetailsModal({
 }
 
 export default function SalesOpportunitiesPage() {
+  const confirm = useConfirm();
   const [opportunities, setOpportunities] =
     useState<SalesOpportunity[]>([]);
 
@@ -1190,7 +1193,7 @@ export default function SalesOpportunitiesPage() {
   async function handleDeleteOpportunity(
     opportunity: SalesOpportunity,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete opportunity "${opportunity.opportunity_name}"?`,
     );
 

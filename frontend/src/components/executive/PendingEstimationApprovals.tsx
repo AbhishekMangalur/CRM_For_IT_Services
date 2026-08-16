@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -85,6 +87,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export function PendingEstimationApprovals() {
+  const confirm = useConfirm();
   const { user } = useAuth();
   const [estimations, setEstimations] = useState<Estimation[]>([]);
   const [solutionsById, setSolutionsById] = useState<Record<number, Solution>>(
@@ -140,7 +143,7 @@ export function PendingEstimationApprovals() {
       return;
     }
 
-    if (!window.confirm(`Approve Estimation #${estimation.id}?`)) {
+    if (!await confirm(`Approve Estimation #${estimation.id}?`)) {
       return;
     }
 

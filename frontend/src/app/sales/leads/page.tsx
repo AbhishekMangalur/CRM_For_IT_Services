@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -751,6 +753,7 @@ function LeadDetailsModal({
 }
 
 export default function SalesLeadsPage() {
+  const confirm = useConfirm();
   const [leads, setLeads] = useState<SalesLead[]>(
     [],
   );
@@ -892,7 +895,7 @@ export default function SalesLeadsPage() {
   async function handleDeleteLead(
     lead: SalesLead,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete lead "${lead.company_name}"?`,
     );
 

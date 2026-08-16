@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -774,6 +776,7 @@ function SolutionDetailsModal({
 }
 
 export default function PresalesSolutionsPage() {
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [solutions, setSolutions] =
@@ -999,7 +1002,7 @@ export default function PresalesSolutionsPage() {
     solution: Solution,
   ): Promise<void> {
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete solution "${solution.solution_name}"?`,
       );
 

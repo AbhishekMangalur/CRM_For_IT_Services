@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -1020,6 +1022,7 @@ function InfluenceDetailsModal({
 /* ================================================= */
 
 export default function AllianceInfluencedOpportunitiesPage() {
+  const confirm = useConfirm();
   const [
     influences,
     setInfluences,
@@ -1363,7 +1366,7 @@ export default function AllianceInfluencedOpportunitiesPage() {
       );
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete ${formatLabel(
           influence.influence_type,
         )} influence for "${

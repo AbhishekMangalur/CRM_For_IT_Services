@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -1142,6 +1144,7 @@ function ResourceRequestDetailsModal({
 /* ================================================= */
 
 export default function ResourceManagerResourceRequestsPage() {
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [
@@ -1503,7 +1506,7 @@ export default function ResourceManagerResourceRequestsPage() {
     request: ResourceRequest,
   ): Promise<void> {
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete resource request "${request.requested_role}"?`,
       );
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -652,6 +654,7 @@ function EmployeeSkillDetailsModal({
 }
 
 export default function ResourceManagerEmployeeSkillsPage() {
+  const confirm = useConfirm();
   const [
     employeeSkills,
     setEmployeeSkills,
@@ -953,7 +956,7 @@ export default function ResourceManagerEmployeeSkillsPage() {
       );
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Remove "${skill?.name ?? "this skill"}" from "${
           employee?.full_name ?? "this employee"
         }"?`,

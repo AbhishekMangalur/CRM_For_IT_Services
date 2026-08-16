@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   useCallback,
   useEffect,
@@ -90,6 +92,7 @@ function money(
 export function BlendedRateCalculator({
   estimationId,
 }: Props) {
+  const confirm = useConfirm();
   const [rates, setRates] =
     useState<BlendedRateInput[]>(DEFAULT_RATES);
 
@@ -228,7 +231,7 @@ export function BlendedRateCalculator({
 
   async function handleDelete() {
     if (
-      !window.confirm(
+      !await confirm(
         "Delete this blended rate configuration?",
       )
     ) {

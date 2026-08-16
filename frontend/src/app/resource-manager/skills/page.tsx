@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -434,6 +436,7 @@ function SkillDetailsModal({
 }
 
 export default function ResourceManagerSkillsPage() {
+  const confirm = useConfirm();
   const [skills, setSkills] =
     useState<ResourceSkill[]>([]);
 
@@ -613,7 +616,7 @@ export default function ResourceManagerSkillsPage() {
   async function handleDeleteSkill(
     skill: ResourceSkill,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete skill "${skill.name}"?`,
     );
 

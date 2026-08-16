@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -1042,6 +1044,7 @@ function AllocationDetailsModal({
 /* ================================================= */
 
 function ResourceManagerAllocationsContent() {
+  const confirm = useConfirm();
   const searchParams = useSearchParams();
 
   const prefilledEmployeeId =
@@ -1488,7 +1491,7 @@ function ResourceManagerAllocationsContent() {
       );
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete allocation for "${
           employee?.full_name ??
           `Employee #${allocation.employee_id}`

@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -831,6 +833,7 @@ function PartnerDetailsModal({
 /* ================================================= */
 
 export default function AlliancePartnersPage() {
+  const confirm = useConfirm();
   const [partners, setPartners] =
     useState<AlliancePartner[]>([]);
 
@@ -1060,7 +1063,7 @@ export default function AlliancePartnersPage() {
     partner: AlliancePartner,
   ): Promise<void> {
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete partner "${partner.name}"?`,
       );
 

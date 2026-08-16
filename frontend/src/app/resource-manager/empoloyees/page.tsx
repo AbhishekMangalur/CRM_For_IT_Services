@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -835,6 +837,7 @@ function EmployeeDetailsModal({
 }
 
 export default function ResourceManagerEmployeesPage() {
+  const confirm = useConfirm();
   const [employees, setEmployees] =
     useState<ResourceEmployee[]>([]);
 
@@ -1067,7 +1070,7 @@ export default function ResourceManagerEmployeesPage() {
   async function handleDeleteEmployee(
     employee: ResourceEmployee,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete employee "${employee.full_name}"?`,
     );
 

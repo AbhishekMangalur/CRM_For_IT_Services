@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -732,6 +734,7 @@ function ProposalDetailsModal({
 /* ================================================= */
 
 export default function PresalesProposalsPage() {
+  const confirm = useConfirm();
   const [proposals, setProposals] =
     useState<Proposal[]>([]);
 
@@ -954,7 +957,7 @@ export default function PresalesProposalsPage() {
   async function handleSubmitProposal(
     proposal: Proposal,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Submit "${proposal.proposal_title}" for approval?`,
     );
 
@@ -992,7 +995,7 @@ export default function PresalesProposalsPage() {
   async function handleDeleteProposal(
     proposal: Proposal,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete proposal "${proposal.proposal_title}"?`,
     );
 

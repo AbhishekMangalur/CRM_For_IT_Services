@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -820,6 +822,7 @@ function AccountDetailsModal({
 }
 
 export default function AccountDirectorAccountsPage() {
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [accounts, setAccounts] = useState<
@@ -987,7 +990,7 @@ export default function AccountDirectorAccountsPage() {
   async function handleDeleteAccount(
     account: AccountDirectorAccount,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete account "${account.account_name}"?`,
     );
 

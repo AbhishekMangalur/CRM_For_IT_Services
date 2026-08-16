@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -766,6 +768,7 @@ function ContractDetailsModal({
 }
 
 export default function AccountDirectorContractsPage() {
+  const confirm = useConfirm();
   const [contracts, setContracts] = useState<
     AccountContract[]
   >([]);
@@ -968,7 +971,7 @@ export default function AccountDirectorContractsPage() {
   async function handleDeleteContract(
     contract: AccountContract,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete contract "${contract.contract_number}"?`,
     );
 

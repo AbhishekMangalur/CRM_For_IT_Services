@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -902,6 +904,7 @@ function AssignmentDetailsModal({
 /* ================================================= */
 
 export default function RfpAssignmentsPage() {
+  const confirm = useConfirm();
   const [
     assignments,
     setAssignments,
@@ -1248,7 +1251,7 @@ export default function RfpAssignmentsPage() {
       );
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete assignment for "${
           user?.full_name ??
           `User #${assignment.user_id}`

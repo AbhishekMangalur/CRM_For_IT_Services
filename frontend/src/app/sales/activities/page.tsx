@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -760,6 +762,7 @@ function ActivityDetailsModal({
 }
 
 export default function SalesActivitiesPage() {
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [activities, setActivities] =
@@ -976,7 +979,7 @@ export default function SalesActivitiesPage() {
   async function handleDeleteActivity(
     activity: SalesActivity,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete activity "${activity.subject}"?`,
     );
 

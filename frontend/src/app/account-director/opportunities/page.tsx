@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -713,6 +715,7 @@ function OpportunityDetailsModal({
 }
 
 export default function AccountDirectorOpportunitiesPage() {
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [opportunities, setOpportunities] =
@@ -930,7 +933,7 @@ export default function AccountDirectorOpportunitiesPage() {
   async function handleDeleteOpportunity(
     opportunity: AccountExpansionOpportunity,
   ): Promise<void> {
-    const confirmed = window.confirm(
+    const confirmed = await confirm(
       `Delete opportunity "${opportunity.opportunity_name}"?`,
     );
 

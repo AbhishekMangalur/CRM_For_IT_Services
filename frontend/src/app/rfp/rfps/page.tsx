@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -1146,6 +1148,7 @@ function RfpDetailsModal({
 /* ================================================= */
 
 export default function RfpsPage() {
+  const confirm = useConfirm();
   const [rfps, setRfps] =
     useState<Rfp[]>([]);
 
@@ -1469,7 +1472,7 @@ export default function RfpsPage() {
     rfp: Rfp,
   ): Promise<void> {
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete RFP "${rfp.rfp_number} - ${rfp.title}"?`,
       );
 

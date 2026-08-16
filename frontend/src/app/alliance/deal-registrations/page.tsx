@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   ChangeEvent,
   FormEvent,
@@ -908,6 +910,7 @@ function DealRegistrationDetailsModal({
 /* ================================================= */
 
 export default function AllianceDealRegistrationsPage() {
+  const confirm = useConfirm();
   const { user } = useAuth();
 
   const [
@@ -1227,7 +1230,7 @@ export default function AllianceDealRegistrationsPage() {
       PartnerDealRegistration,
   ): Promise<void> {
     const confirmed =
-      window.confirm(
+      await confirm(
         `Delete deal registration "${registration.registration_reference}"?`,
       );
 

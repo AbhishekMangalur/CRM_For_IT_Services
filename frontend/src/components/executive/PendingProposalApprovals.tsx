@@ -1,5 +1,7 @@
 "use client";
 
+import { useConfirm } from "@/providers/ConfirmProvider";
+
 import {
   useCallback,
   useEffect,
@@ -68,6 +70,7 @@ function getErrorMessage(
 }
 
 export function PendingProposalApprovals() {
+  const confirm = useConfirm();
   const [
     proposals,
     setProposals,
@@ -189,7 +192,7 @@ export function PendingProposalApprovals() {
     }
 
     const confirmed =
-      window.confirm(
+      await confirm(
         `Approve proposal "${proposal.proposal_title}"?`,
       );
 

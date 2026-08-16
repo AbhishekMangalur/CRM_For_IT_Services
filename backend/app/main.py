@@ -102,10 +102,9 @@ app.include_router(executive_kpi_router)
 app.include_router(presales_template_router)
 
 
-@app.get("/")
 def root():
     return {
-        "message": "CRM Backend CI/CD Test V3",
+        "message": "CRM for IT Services API is running",
         "status": "success",
     }
 
