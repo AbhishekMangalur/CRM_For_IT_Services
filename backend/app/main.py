@@ -132,3 +132,7 @@ def health_check():
             else "unavailable"
         ),
     }
+
+@app.get("/")
+def root():
+    return {"message": "backend version 2"}
