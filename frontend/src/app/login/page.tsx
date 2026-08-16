@@ -141,10 +141,6 @@ export default function LoginPage() {
       return "Password is required.";
     }
 
-    if (formData.password.length < 6) {
-      return "Password must contain at least 6 characters.";
-    }
-
     return null;
   }
 
