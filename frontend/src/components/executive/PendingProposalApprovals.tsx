@@ -22,6 +22,7 @@ import {
   getProposals,
   rejectProposal,
 } from "@/lib/presales-api";
+import { useAuth } from "@/hooks/useAuth";
 
 import {
   Alert,
@@ -71,6 +72,7 @@ function getErrorMessage(
 
 export function PendingProposalApprovals() {
   const confirm = useConfirm();
+  const { user } = useAuth();
   const [
     proposals,
     setProposals,
@@ -107,33 +109,6 @@ export function PendingProposalApprovals() {
     rejectionReason,
     setRejectionReason,
   ] = useState("");
-
-  function getLoggedInUserId():
-    | number
-    | null {
-    if (
-      typeof window ===
-      "undefined"
-    ) {
-      return null;
-    }
-
-    const value =
-      localStorage.getItem(
-        "user_id",
-      );
-
-    if (!value) {
-      return null;
-    }
-
-    const parsed =
-      Number(value);
-
-    return Number.isFinite(parsed)
-      ? parsed
-      : null;
-  }
 
   const loadPendingProposals =
     useCallback(
@@ -181,10 +156,7 @@ export function PendingProposalApprovals() {
   async function handleApprove(
     proposal: Proposal,
   ): Promise<void> {
-    const userId =
-      getLoggedInUserId();
-
-    if (!userId) {
+    if (!user) {
       setError(
         "Unable to identify the logged-in Executive user.",
       );
@@ -210,7 +182,7 @@ export function PendingProposalApprovals() {
     try {
       await approveProposal(
         proposal.id,
-        userId,
+        user.id,
       );
 
       setSuccessMessage(
@@ -255,10 +227,7 @@ export function PendingProposalApprovals() {
       return;
     }
 
-    const userId =
-      getLoggedInUserId();
-
-    if (!userId) {
+    if (!user) {
       setError(
         "Unable to identify the logged-in Executive user.",
       );
@@ -275,7 +244,7 @@ export function PendingProposalApprovals() {
     try {
       await rejectProposal(
         rejectingProposal.id,
-        userId,
+        user.id,
         rejectionReason.trim(),
       );
 
