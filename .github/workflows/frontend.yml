@@ -9,7 +9,7 @@ on:
       - ".github/workflows/frontend.yml"
 
 jobs:
-  build-and-push:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -30,4 +30,12 @@ jobs:
           build-args: |
             NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
           tags: |
+            ${{ secrets.DOCKER_USERNAME }}/crm-frontend:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/crm-frontend:latest
+
+      - name: Deploy frontend to Azure
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: crm-frontend-app
+          publish-profile: ${{ secrets.AZURE_FRONTEND_PUBLISH_PROFILE }}
+          images: ${{ secrets.DOCKER_USERNAME }}/crm-frontend:${{ github.sha }}
