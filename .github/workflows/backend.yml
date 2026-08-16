@@ -28,4 +28,5 @@ jobs:
           context: ./backend
           push: true
           tags: |
+            ${{ secrets.DOCKER_USERNAME }}/crm-backend:${{ github.sha }}
             ${{ secrets.DOCKER_USERNAME }}/crm-backend:latest
