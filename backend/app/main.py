@@ -28,6 +28,7 @@ from app.core.database import (
     Base,
     engine,
     ensure_rfp_completed_at_column,
+    ensure_proposal_document_columns,
     normalize_currency_to_usd,
 )
 
@@ -46,6 +47,7 @@ def create_tables() -> None:
     try:
         Base.metadata.create_all(bind=engine)
         ensure_rfp_completed_at_column()
+        ensure_proposal_document_columns()
         normalize_currency_to_usd()
         app.state.database_available = True
     except SQLAlchemyError as error:

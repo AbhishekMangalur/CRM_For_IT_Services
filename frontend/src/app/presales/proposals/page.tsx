@@ -50,8 +50,10 @@ import {
   deleteProposal,
   getProposals,
   getSolutions,
+  openProposalPdf,
   replaceProposal,
   submitProposal,
+  uploadProposalDocuments,
 } from "@/lib/presales-api";
 
 import type {
@@ -60,6 +62,7 @@ import type {
   Proposal,
   ProposalStatus,
   Solution,
+  UpdateProposalRequest,
 } from "@/types/presales";
 
 /* ================================================= */
@@ -233,7 +236,7 @@ function proposalToForm(
 
 function formToPayload(
   form: ProposalFormState,
-): CreateProposalRequest {
+): UpdateProposalRequest {
   return {
     solution_id:
       Number(form.solution_id),
@@ -275,7 +278,9 @@ interface ProposalFormModalProps {
   error: string;
   onClose: () => void;
   onSubmit: (
-    payload: CreateProposalRequest,
+    payload: UpdateProposalRequest,
+    sowDocument: File | null,
+    proposalDocument: File | null,
   ) => Promise<void>;
 }
 
@@ -293,6 +298,8 @@ function ProposalFormModal({
         ? proposalToForm(proposal)
         : EMPTY_FORM,
     );
+  const [sowDocument, setSowDocument] = useState<File | null>(null);
+  const [proposalDocument, setProposalDocument] = useState<File | null>(null);
 
   function handleChange(
     event:
@@ -311,7 +318,10 @@ function ProposalFormModal({
   const isInvalid =
     !form.solution_id ||
     !form.proposal_title.trim() ||
-    !form.version.trim();
+    !form.version.trim() ||
+    (!proposal?.sow_document_url && !sowDocument) ||
+    (!proposal?.proposal_document_url && !proposalDocument) ||
+    Boolean(sowDocument) !== Boolean(proposalDocument);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -324,6 +334,8 @@ function ProposalFormModal({
 
     await onSubmit(
       formToPayload(form),
+      sowDocument,
+      proposalDocument,
     );
   }
 
@@ -428,37 +440,46 @@ function ProposalFormModal({
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="sow_document_url">
-                SOW Document URL
-              </Label>
+            <>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="sow_document">
+                    SOW Document (PDF) {!proposal?.sow_document_url && "*"}
+                  </Label>
+                  <Input
+                    id="sow_document"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="h-14 cursor-pointer border-slate-300 bg-slate-100 py-2 leading-10 text-slate-600 file:mr-4 file:h-10 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-300 file:px-4 file:py-0 file:align-middle file:font-medium file:leading-10 file:text-slate-800 hover:file:bg-slate-400"
+                    required={!proposal?.sow_document_url}
+                    onChange={(event) =>
+                      setSowDocument(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <p className="text-xs text-slate-500">PDF only, maximum 10 MB.</p>
+                </div>
 
-              <Input
-                id="sow_document_url"
-                name="sow_document_url"
-                type="url"
-                value={form.sow_document_url}
-                onChange={handleChange}
-                placeholder="https://example.com/sow.pdf"
-              />
-            </div>
-
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="proposal_document_url">
-                Proposal Document URL
-              </Label>
-
-              <Input
-                id="proposal_document_url"
-                name="proposal_document_url"
-                type="url"
-                value={
-                  form.proposal_document_url
-                }
-                onChange={handleChange}
-                placeholder="https://example.com/proposal.pdf"
-              />
-            </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="proposal_document">
+                    Proposal Document (PDF) {!proposal?.proposal_document_url && "*"}
+                  </Label>
+                  <Input
+                    id="proposal_document"
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    className="h-14 cursor-pointer border-slate-300 bg-slate-100 py-2 leading-10 text-slate-600 file:mr-4 file:h-10 file:cursor-pointer file:rounded-md file:border-0 file:bg-slate-300 file:px-4 file:py-0 file:align-middle file:font-medium file:leading-10 file:text-slate-800 hover:file:bg-slate-400"
+                    required={!proposal?.proposal_document_url}
+                    onChange={(event) =>
+                      setProposalDocument(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <p className="text-xs text-slate-500">PDF only, maximum 10 MB.</p>
+                </div>
+                {proposal && (
+                  <p className="md:col-span-2 text-xs text-slate-500">
+                    Leave both files blank to retain the current PDFs, or select both to replace them.
+                  </p>
+                )}
+              </>
 
             <div className="space-y-2">
               <Label htmlFor="proposal_status">
@@ -664,29 +685,25 @@ function ProposalDetailsModal({
           </div>
 
           {proposal.sow_document_url && (
-            <a
-              href={proposal.sow_document_url}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => void openProposalPdf(proposal.id, "sow")}
               className="flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 p-4 font-medium text-blue-700 transition hover:bg-blue-100"
             >
               <ExternalLink className="h-4 w-4" />
               Open SOW Document
-            </a>
+            </button>
           )}
 
           {proposal.proposal_document_url && (
-            <a
-              href={
-                proposal.proposal_document_url
-              }
-              target="_blank"
-              rel="noreferrer"
+            <button
+              type="button"
+              onClick={() => void openProposalPdf(proposal.id, "proposal")}
               className="flex items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-indigo-50 p-4 font-medium text-indigo-700 transition hover:bg-indigo-100"
             >
               <ExternalLink className="h-4 w-4" />
               Open Proposal Document
-            </a>
+            </button>
           )}
 
           <div className="rounded-xl bg-slate-50 p-4 sm:col-span-2">
@@ -915,18 +932,28 @@ export default function PresalesProposalsPage() {
   /* ---------------- SAVE ---------------- */
 
   async function handleSaveProposal(
-    payload: CreateProposalRequest,
+    payload: UpdateProposalRequest,
+    sowDocument: File | null,
+    proposalDocument: File | null,
   ): Promise<void> {
     setIsSaving(true);
     setFormError("");
 
     try {
       if (editingProposal) {
-        const updated =
+        let updated =
           await replaceProposal(
             editingProposal.id,
             payload,
           );
+
+        if (sowDocument && proposalDocument) {
+          updated = await uploadProposalDocuments(
+            editingProposal.id,
+            sowDocument,
+            proposalDocument,
+          );
+        }
 
         setProposals((current) =>
           current.map((proposal) =>
@@ -936,8 +963,16 @@ export default function PresalesProposalsPage() {
           ),
         );
       } else {
+        if (!sowDocument || !proposalDocument) {
+          setFormError("Both SOW and proposal PDF files are required.");
+          return;
+        }
         const created =
-          await createProposal(payload);
+          await createProposal({
+            ...payload,
+            sow_document: sowDocument,
+            proposal_document: proposalDocument,
+          } satisfies CreateProposalRequest);
 
         setProposals((current) => [
           created,
@@ -1407,11 +1442,7 @@ export default function PresalesProposalsPage() {
                                       variant="outline"
                                       title="Open SOW"
                                       onClick={() =>
-                                        window.open(
-                                          proposal.sow_document_url,
-                                          "_blank",
-                                          "noopener,noreferrer",
-                                        )
+                                        void openProposalPdf(proposal.id, "sow")
                                       }
                                     >
                                       <FileCheck2 className="h-4 w-4" />
@@ -1425,11 +1456,7 @@ export default function PresalesProposalsPage() {
                                       variant="outline"
                                       title="Open proposal document"
                                       onClick={() =>
-                                        window.open(
-                                          proposal.proposal_document_url,
-                                          "_blank",
-                                          "noopener,noreferrer",
-                                        )
+                                        void openProposalPdf(proposal.id, "proposal")
                                       }
                                     >
                                       <ExternalLink className="h-4 w-4" />

@@ -20,8 +20,11 @@ import {
 import {
   approveProposal,
   getProposals,
+  getSolutions,
+  openProposalPdf,
   rejectProposal,
 } from "@/lib/presales-api";
+import { getSalesOpportunities } from "@/lib/sales-api";
 import { useAuth } from "@/hooks/useAuth";
 
 import {
@@ -40,7 +43,9 @@ import { Textarea } from "@/components/ui/textarea";
 
 import type {
   Proposal,
+  Solution,
 } from "@/types/presales";
+import type { SalesOpportunity } from "@/types/sales";
 
 function getErrorMessage(
   error: unknown,
@@ -77,6 +82,12 @@ export function PendingProposalApprovals() {
     proposals,
     setProposals,
   ] = useState<Proposal[]>([]);
+  const [solutionsById, setSolutionsById] = useState<Record<number, Solution>>(
+    {},
+  );
+  const [opportunitiesById, setOpportunitiesById] = useState<
+    Record<number, SalesOpportunity>
+  >({});
 
   const [
     isLoading,
@@ -117,11 +128,25 @@ export function PendingProposalApprovals() {
         setError("");
 
         try {
-          const records =
-            await getProposals({
+          const [records, solutions, opportunities] = await Promise.all([
+            getProposals({
               skip: 0,
               limit: 100,
-            });
+            }),
+            getSolutions({ skip: 0, limit: 100 }),
+            getSalesOpportunities({ skip: 0, limit: 100 }),
+          ]);
+
+          setSolutionsById(
+            Object.fromEntries(
+              solutions.map((solution) => [solution.id, solution]),
+            ),
+          );
+          setOpportunitiesById(
+            Object.fromEntries(
+              opportunities.map((opportunity) => [opportunity.id, opportunity]),
+            ),
+          );
 
           setProposals(
             records.filter(
@@ -378,7 +403,13 @@ export function PendingProposalApprovals() {
 
                 <tbody className="divide-y divide-indigo-50">
                   {proposals.map(
-                    (proposal) => (
+                    (proposal) => {
+                      const solution = solutionsById[proposal.solution_id];
+                      const opportunity = solution
+                        ? opportunitiesById[solution.opportunity_id]
+                        : undefined;
+
+                      return (
                       <tr
                         key={proposal.id}
                         className="bg-white transition hover:bg-indigo-50/30"
@@ -389,7 +420,11 @@ export function PendingProposalApprovals() {
                           </p>
 
                           <p className="mt-1 text-xs text-slate-500">
-                            Proposal #{proposal.id} · Solution #{proposal.solution_id}
+                            {solution?.solution_name ??
+                              `Solution #${proposal.solution_id}`}
+                            {opportunity?.client_name
+                              ? ` · ${opportunity.client_name}`
+                              : ""}
                           </p>
                         </td>
 
@@ -415,8 +450,27 @@ export function PendingProposalApprovals() {
                         </td>
 
                         <td className="px-4 py-4">
-                          <div className="flex justify-end gap-2">
-                            <Button
+                          <div className="flex flex-col items-end gap-2">
+                            <div className="flex gap-2">
+                              <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openProposalPdf(proposal.id, "sow")}
+                            >
+                              View SOW
+                              </Button>
+                              <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void openProposalPdf(proposal.id, "proposal")}
+                            >
+                              View Proposal
+                              </Button>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
                               type="button"
                               size="sm"
                               className="bg-emerald-600 hover:bg-emerald-700"
@@ -438,9 +492,9 @@ export function PendingProposalApprovals() {
                               )}
 
                               Approve
-                            </Button>
+                              </Button>
 
-                            <Button
+                              <Button
                               type="button"
                               size="sm"
                               variant="outline"
@@ -458,11 +512,13 @@ export function PendingProposalApprovals() {
                               <XCircle className="mr-2 h-4 w-4" />
 
                               Reject
-                            </Button>
+                              </Button>
+                            </div>
                           </div>
                         </td>
                       </tr>
-                    ),
+                      );
+                    },
                   )}
                 </tbody>
               </table>

@@ -148,10 +148,11 @@ def synchronize_estimation_commercial_values(
     db: Session,
     estimation: Estimation,
 ) -> tuple[Opportunity, Lead | None]:
-    """Copy an accepted estimation's billing value to its sales records.
+    """Apply an approved estimation to its solution and sales records.
 
-    The caller owns the transaction so the estimation status and commercial
-    values are always committed (or rolled back) together.
+    The caller owns the transaction so the estimation approval, solution
+    approval, and commercial values are always committed (or rolled back)
+    together.
     """
     solution = db.get(Solution, estimation.solution_id)
 
@@ -181,6 +182,7 @@ def synchronize_estimation_commercial_values(
             detail="The opportunity is linked to a lead that no longer exists",
         )
 
+    solution.solution_status = "APPROVED"
     opportunity.deal_value = estimation.billing_amount
 
     if lead is not None:
@@ -692,8 +694,8 @@ def approve_estimation(
                 lead.estimated_value if lead is not None else None
             ),
             "message": (
-                "Estimation approved and commercial values "
-                "synchronized successfully."
+                "Estimation and solution approved; commercial "
+                "values synchronized successfully."
             ),
         }
     )
@@ -758,13 +760,33 @@ def reject_estimation(
             detail="Rejection reason is required",
         )
 
-    estimation.approval_status = "REJECTED"
-    estimation.approved_by = approver.id
-    estimation.approved_at = datetime.now(timezone.utc)
-    estimation.rejection_reason = rejection_reason.strip()
+    solution = db.get(Solution, estimation.solution_id)
 
-    db.commit()
-    db.refresh(estimation)
+    if not solution:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The estimation is not linked to an existing solution",
+        )
+
+    try:
+        estimation.approval_status = "REJECTED"
+        estimation.approved_by = approver.id
+        estimation.approved_at = datetime.now(timezone.utc)
+        estimation.rejection_reason = rejection_reason.strip()
+        solution.solution_status = "REJECTED"
+
+        db.flush()
+        db.commit()
+        db.refresh(estimation)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Estimation rejection failed; the linked solution was not "
+                "rejected"
+            ),
+        ) from error
 
     return estimation
 
@@ -1101,6 +1123,10 @@ def validate_proposal_relations(
 def create_proposal(
     db: Session,
     data: dict[str, Any],
+    sow_document: bytes | None = None,
+    sow_filename: str | None = None,
+    proposal_document: bytes | None = None,
+    proposal_filename: str | None = None,
 ) -> Proposal:
     validate_proposal_relations(
         db,
@@ -1108,11 +1134,24 @@ def create_proposal(
     )
 
     try:
-        return create_record(
-            db,
-            Proposal,
-            data,
+        proposal = Proposal(
+            **data,
+            sow_document_filename=sow_filename,
+            sow_document_content=sow_document,
+            proposal_document_filename=proposal_filename,
+            proposal_document_content=proposal_document,
         )
+        db.add(proposal)
+        db.flush()
+        proposal.sow_document_url = (
+            f"/api/presale/proposals/{proposal.id}/sow-document"
+        )
+        proposal.proposal_document_url = (
+            f"/api/presale/proposals/{proposal.id}/proposal-document"
+        )
+        db.commit()
+        db.refresh(proposal)
+        return proposal
     except IntegrityError as error:
         handle_integrity_error(db, error)
 
@@ -1175,11 +1214,14 @@ def submit_proposal(
         proposal_id,
     )
 
-    if not proposal.proposal_document_url:
+    if (
+        not proposal.sow_document_content
+        or not proposal.proposal_document_content
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                "Proposal document URL is required "
+                "Both SOW and proposal PDF documents are required "
                 "before submission"
             ),
         )

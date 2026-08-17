@@ -302,9 +302,9 @@ export interface CreateProposalRequest {
 
   version: string;
 
-  sow_document_url: string;
+  sow_document: File;
 
-  proposal_document_url: string;
+  proposal_document: File;
 
   submission_date: string | null;
 
@@ -315,11 +315,20 @@ export interface CreateProposalRequest {
   remarks: string;
 }
 
-export type UpdateProposalRequest =
-  CreateProposalRequest;
+export interface UpdateProposalRequest {
+  solution_id: number;
+  proposal_title: string;
+  version: string;
+  sow_document_url: string;
+  proposal_document_url: string;
+  submission_date: string | null;
+  proposal_status: ProposalStatus;
+  approval_status: ApprovalStatus;
+  remarks: string;
+}
 
 export type PatchProposalRequest =
-  Partial<CreateProposalRequest>;
+  Partial<UpdateProposalRequest>;
 
 
 

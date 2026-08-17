@@ -44,6 +44,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { api } from "@/lib/api";
+import { getSalesOpportunities } from "@/lib/sales-api";
+import type { SalesOpportunity } from "@/types/sales";
 
 import {
   createRfp,
@@ -412,6 +414,7 @@ interface RfpFormModalProps {
   rfp: Rfp | null;
 
   owners: RfpOwnerUser[];
+  opportunities: SalesOpportunity[];
 
   isSaving: boolean;
 
@@ -427,6 +430,7 @@ interface RfpFormModalProps {
 function RfpFormModal({
   rfp,
   owners,
+  opportunities,
   isSaving,
   error,
   onClose,
@@ -438,6 +442,40 @@ function RfpFormModal({
         ? rfpToForm(rfp)
         : EMPTY_FORM,
     );
+  const [selectedOpportunityId, setSelectedOpportunityId] = useState(() => {
+    if (!rfp) return "";
+    return (
+      opportunities.find(
+        (opportunity) =>
+          opportunity.opportunity_name === rfp.title &&
+          opportunity.client_name === rfp.client_name,
+      )?.id.toString() ?? ""
+    );
+  });
+
+  function handleOpportunityChange(
+    event: ChangeEvent<HTMLSelectElement>,
+  ): void {
+    const opportunityId = event.target.value;
+    setSelectedOpportunityId(opportunityId);
+    const opportunity = opportunities.find(
+      (record) => record.id === Number(opportunityId),
+    );
+
+    if (!opportunity) return;
+
+    setForm((previous) => ({
+      ...previous,
+      title: opportunity.opportunity_name,
+      client_name: opportunity.client_name,
+      industry: opportunity.industry ?? "",
+      service_type: opportunity.service_type,
+      estimated_value: opportunity.deal_value,
+      currency: opportunity.currency || "USD",
+      description: opportunity.description ?? "",
+      owner_id: opportunity.sales_owner_id.toString(),
+    }));
+  }
 
   function handleChange(
     event:
@@ -468,6 +506,7 @@ function RfpFormModal({
 
   const isInvalid =
     !form.rfp_number.trim() ||
+    !selectedOpportunityId ||
     !form.title.trim() ||
     !form.client_name.trim() ||
     !form.industry.trim() ||
@@ -607,18 +646,28 @@ function RfpFormModal({
             {/* TITLE */}
 
             <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="title">
-                RFP Title *
+              <Label htmlFor="opportunity_id">
+                RFP Title / Sales Opportunity *
               </Label>
 
-              <Input
-                id="title"
-                name="title"
-                value={form.title}
-                onChange={handleChange}
-                placeholder="Cloud Migration and Managed Services"
+              <select
+                id="opportunity_id"
+                value={selectedOpportunityId}
+                onChange={handleOpportunityChange}
                 required
-              />
+                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
+              >
+                <option value="">Select opportunity</option>
+                {opportunities.map((opportunity) => (
+                  <option key={opportunity.id} value={opportunity.id}>
+                    {opportunity.opportunity_name} · {opportunity.client_name}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500">
+                Selecting an opportunity fills the client, industry, service,
+                value, currency, description, and owner fields.
+              </p>
             </div>
 
             {/* CLIENT */}
@@ -1154,6 +1203,8 @@ export default function RfpsPage() {
 
   const [owners, setOwners] =
     useState<RfpOwnerUser[]>([]);
+  const [opportunities, setOpportunities] =
+    useState<SalesOpportunity[]>([]);
 
   const [search, setSearch] =
     useState("");
@@ -1220,6 +1271,7 @@ export default function RfpsPage() {
           const [
             rfpRecords,
             userRecords,
+            opportunityRecords,
           ] = await Promise.all([
             getRfps({
               skip: 0,
@@ -1227,9 +1279,11 @@ export default function RfpsPage() {
             }),
 
             getUsers(),
+            getSalesOpportunities({ skip: 0, limit: 500 }),
           ]);
 
           setRfps(rfpRecords);
+          setOpportunities(opportunityRecords);
 
           /*
            * Backend rule:
@@ -1267,7 +1321,11 @@ export default function RfpsPage() {
     );
 
   useEffect(() => {
-    void loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadData]);
 
   /* ================================================= */
@@ -2065,6 +2123,7 @@ export default function RfpsPage() {
           <RfpFormModal
             rfp={editingRfp}
             owners={owners}
+            opportunities={opportunities}
             isSaving={isSaving}
             error={formError}
             onClose={() => {

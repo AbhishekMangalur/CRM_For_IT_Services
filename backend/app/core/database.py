@@ -152,3 +152,32 @@ def ensure_rfp_completed_at_column() -> None:
                 "AND rfp_status IN ('SUBMITTED', 'WON', 'LOST')"
             )
         )
+
+
+def ensure_proposal_document_columns() -> None:
+    """Add persistent PDF document columns to existing proposal tables."""
+
+    with engine.begin() as connection:
+        inspector = inspect(connection)
+        if "proposals" not in inspector.get_table_names():
+            return
+
+        existing = {
+            column["name"] for column in inspector.get_columns("proposals")
+        }
+        binary_type = "BYTEA" if connection.dialect.name == "postgresql" else "BLOB"
+        columns = {
+            "sow_document_filename": "VARCHAR(255)",
+            "sow_document_content": binary_type,
+            "proposal_document_filename": "VARCHAR(255)",
+            "proposal_document_content": binary_type,
+        }
+
+        for column_name, column_type in columns.items():
+            if column_name not in existing:
+                connection.execute(
+                    text(
+                        f"ALTER TABLE proposals ADD COLUMN {column_name} "
+                        f"{column_type} NULL"
+                    )
+                )

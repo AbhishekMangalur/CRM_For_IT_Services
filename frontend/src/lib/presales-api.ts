@@ -382,11 +382,67 @@ export async function getProposalById(
 export async function createProposal(
   payload: CreateProposalRequest,
 ): Promise<Proposal> {
+  const formData = new FormData();
+  formData.append("solution_id", payload.solution_id.toString());
+  formData.append("proposal_title", payload.proposal_title);
+  formData.append("version", payload.version);
+  formData.append("proposal_status", payload.proposal_status);
+  formData.append("approval_status", payload.approval_status);
+  if (payload.submission_date) {
+    formData.append("submission_date", payload.submission_date);
+  }
+  if (payload.remarks) {
+    formData.append("remarks", payload.remarks);
+  }
+  formData.append("sow_document", payload.sow_document);
+  formData.append("proposal_document", payload.proposal_document);
+
   const response = await api.post<Proposal>(
     PRESALES_ENDPOINTS.PROPOSALS,
-    payload,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
   );
 
+  return response.data;
+}
+
+export async function openProposalPdf(
+  proposalId: number,
+  documentType: "sow" | "proposal",
+): Promise<void> {
+  const viewer = window.open("", "_blank");
+  const endpoint = documentType === "sow" ? "sow-document" : "proposal-document";
+  try {
+    const response = await api.get<Blob>(
+      `${PRESALES_ENDPOINTS.PROPOSALS}/${proposalId}/${endpoint}`,
+      { responseType: "blob" },
+    );
+    const objectUrl = URL.createObjectURL(response.data);
+    if (viewer) {
+      viewer.location.href = objectUrl;
+    } else {
+      window.location.href = objectUrl;
+    }
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  } catch (error) {
+    viewer?.close();
+    throw error;
+  }
+}
+
+export async function uploadProposalDocuments(
+  proposalId: number,
+  sowDocument: File,
+  proposalDocument: File,
+): Promise<Proposal> {
+  const formData = new FormData();
+  formData.append("sow_document", sowDocument);
+  formData.append("proposal_document", proposalDocument);
+  const response = await api.put<Proposal>(
+    `${PRESALES_ENDPOINTS.PROPOSALS}/${proposalId}/documents`,
+    formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  );
   return response.data;
 }
 

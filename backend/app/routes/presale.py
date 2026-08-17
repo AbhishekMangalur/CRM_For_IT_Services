@@ -1,9 +1,16 @@
+from datetime import date
+from pathlib import PurePath
+from urllib.parse import quote
+
 from fastapi import (
     APIRouter,
     Depends,
+    File,
+    Form,
     HTTPException,
     Query,
     Response,
+    UploadFile,
     status,
 )
 from sqlalchemy.orm import Session
@@ -423,13 +430,133 @@ def delete_resource_requirement_api(
     response_model=ProposalResponse,
     status_code=status.HTTP_201_CREATED,
 )
-def create_proposal_api(
-    payload: ProposalCreate,
+async def create_proposal_api(
+    solution_id: int = Form(...),
+    proposal_title: str = Form(...),
+    version: str = Form("1.0"),
+    proposal_status: str = Form("DRAFT"),
+    approval_status: str = Form("PENDING"),
+    submission_date: date | None = Form(None),
+    remarks: str | None = Form(None),
+    sow_document: UploadFile = File(...),
+    proposal_document: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    async def read_pdf(file: UploadFile, label: str) -> tuple[bytes, str]:
+        filename = PurePath(file.filename or "document.pdf").name
+        content = await file.read(10 * 1024 * 1024 + 1)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"{label} must be 10 MB or smaller",
+            )
+        if file.content_type != "application/pdf" or not content.startswith(b"%PDF-"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"{label} must be a valid PDF file",
+            )
+        return content, filename
+
+    sow_content, sow_filename = await read_pdf(sow_document, "SOW document")
+    proposal_content, proposal_filename = await read_pdf(
+        proposal_document, "Proposal document"
+    )
+
+    payload = ProposalCreate(
+        solution_id=solution_id,
+        proposal_title=proposal_title,
+        version=version,
+        submission_date=submission_date,
+        proposal_status=proposal_status,
+        approval_status=approval_status,
+        remarks=remarks,
+    )
     return create_proposal(
         db,
         payload.model_dump(),
+        sow_document=sow_content,
+        sow_filename=sow_filename,
+        proposal_document=proposal_content,
+        proposal_filename=proposal_filename,
+    )
+
+
+def proposal_pdf_response(content: bytes | None, filename: str | None) -> Response:
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Proposal document not found",
+        )
+    safe_filename = filename or "document.pdf"
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{quote(safe_filename)}"
+        },
+    )
+
+
+@router.put("/proposals/{proposal_id}/documents", response_model=ProposalResponse)
+async def replace_proposal_documents_api(
+    proposal_id: int,
+    sow_document: UploadFile = File(...),
+    proposal_document: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    async def read_pdf(file: UploadFile, label: str) -> tuple[bytes, str]:
+        filename = PurePath(file.filename or "document.pdf").name
+        content = await file.read(10 * 1024 * 1024 + 1)
+        if len(content) > 10 * 1024 * 1024:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"{label} must be 10 MB or smaller",
+            )
+        if file.content_type != "application/pdf" or not content.startswith(b"%PDF-"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"{label} must be a valid PDF file",
+            )
+        return content, filename
+
+    proposal = get_proposal(db, proposal_id)
+    sow_content, sow_filename = await read_pdf(sow_document, "SOW document")
+    proposal_content, proposal_filename = await read_pdf(
+        proposal_document, "Proposal document"
+    )
+    proposal.sow_document_content = sow_content
+    proposal.sow_document_filename = sow_filename
+    proposal.proposal_document_content = proposal_content
+    proposal.proposal_document_filename = proposal_filename
+    proposal.sow_document_url = f"/api/presale/proposals/{proposal.id}/sow-document"
+    proposal.proposal_document_url = (
+        f"/api/presale/proposals/{proposal.id}/proposal-document"
+    )
+    db.commit()
+    db.refresh(proposal)
+    return proposal
+
+
+@router.get("/proposals/{proposal_id}/sow-document")
+def get_sow_document_api(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+):
+    proposal = get_proposal(db, proposal_id)
+    return proposal_pdf_response(
+        proposal.sow_document_content, proposal.sow_document_filename
+    )
+
+
+@router.get("/proposals/{proposal_id}/proposal-document")
+def get_proposal_document_api(
+    proposal_id: int,
+    db: Session = Depends(get_db),
+):
+    proposal = get_proposal(db, proposal_id)
+    return proposal_pdf_response(
+        proposal.proposal_document_content,
+        proposal.proposal_document_filename,
     )
 
 

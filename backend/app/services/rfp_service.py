@@ -116,6 +116,8 @@ def normalize_rfp_data(
 
 
 COMPLETED_RFP_STATUSES = {"SUBMITTED", "WON", "LOST"}
+FINAL_RFP_OUTCOME_STATUSES = {"WON", "LOST"}
+FINAL_ASSIGNMENT_STATUSES = {"COMPLETED", "CANCELLED"}
 
 
 def apply_rfp_completion_timestamp(
@@ -134,6 +136,21 @@ def apply_rfp_completion_timestamp(
         data["completed_at"] = None
 
     return data
+
+
+def complete_rfp_assignments_for_final_outcome(
+    db: Session,
+    rfp: RFP,
+    data: dict[str, Any],
+) -> None:
+    next_status = data.get("rfp_status", rfp.rfp_status)
+
+    if next_status not in FINAL_RFP_OUTCOME_STATUSES:
+        return
+
+    for assignment in get_assignments_by_rfp(db, rfp.id):
+        if assignment.assignment_status not in FINAL_ASSIGNMENT_STATUSES:
+            assignment.assignment_status = "COMPLETED"
 
 
 def validate_rfp(
@@ -311,6 +328,8 @@ def update_rfp(
         data,
         existing_rfp=rfp,
     )
+
+    complete_rfp_assignments_for_final_outcome(db, rfp, data)
 
     try:
         return update_record(

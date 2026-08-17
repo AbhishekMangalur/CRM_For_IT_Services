@@ -20,6 +20,7 @@ import {
   getSolutions,
   rejectEstimation,
 } from "@/lib/presales-api";
+import { getSalesOpportunities } from "@/lib/sales-api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import type { Estimation, Solution } from "@/types/presales";
+import type { SalesOpportunity } from "@/types/sales";
 
 function formatLabel(value: string): string {
   return value
@@ -93,6 +95,9 @@ export function PendingEstimationApprovals() {
   const [solutionsById, setSolutionsById] = useState<Record<number, Solution>>(
     {},
   );
+  const [opportunitiesById, setOpportunitiesById] = useState<
+    Record<number, SalesOpportunity>
+  >({});
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -101,19 +106,41 @@ export function PendingEstimationApprovals() {
     useState<Estimation | null>(null);
   const [rejectionReason, setRejectionReason] = useState("");
 
+  function getEstimationContext(estimation: Estimation): {
+    clientName: string | null;
+    solutionName: string;
+  } {
+    const solution = solutionsById[estimation.solution_id];
+    const opportunity = solution
+      ? opportunitiesById[solution.opportunity_id]
+      : undefined;
+
+    return {
+      clientName: opportunity?.client_name ?? null,
+      solutionName:
+        solution?.solution_name ?? `Solution #${estimation.solution_id}`,
+    };
+  }
+
   const loadApprovals = useCallback(async (): Promise<void> => {
     setIsLoading(true);
     setError("");
 
     try {
-      const [records, solutions] = await Promise.all([
+      const [records, solutions, opportunities] = await Promise.all([
         getEstimations({ skip: 0, limit: 100 }),
         getSolutions({ skip: 0, limit: 100 }),
+        getSalesOpportunities({ skip: 0, limit: 100 }),
       ]);
 
       setSolutionsById(
         Object.fromEntries(
           solutions.map((solution) => [solution.id, solution]),
+        ),
+      );
+      setOpportunitiesById(
+        Object.fromEntries(
+          opportunities.map((opportunity) => [opportunity.id, opportunity]),
         ),
       );
       setEstimations(
@@ -143,7 +170,12 @@ export function PendingEstimationApprovals() {
       return;
     }
 
-    if (!await confirm(`Approve Estimation #${estimation.id}?`)) {
+    const { clientName, solutionName } = getEstimationContext(estimation);
+    const approvalSubject = clientName
+      ? `${solutionName} for ${clientName}`
+      : solutionName;
+
+    if (!await confirm(`Approve ${approvalSubject}?`)) {
       return;
     }
 
@@ -154,7 +186,7 @@ export function PendingEstimationApprovals() {
     try {
       await approveEstimation(estimation.id, user.id);
       setSuccessMessage(
-        `Estimation #${estimation.id} approved successfully.`,
+        `${approvalSubject} approved successfully.`,
       );
       await loadApprovals();
     } catch (requestError) {
@@ -192,8 +224,14 @@ export function PendingEstimationApprovals() {
     setSuccessMessage("");
 
     try {
+      const { clientName, solutionName } =
+        getEstimationContext(rejectingEstimation);
+      const rejectionSubject = clientName
+        ? `${solutionName} for ${clientName}`
+        : solutionName;
+
       await rejectEstimation(rejectingEstimation.id, user.id, reason);
-      setSuccessMessage(`Estimation #${rejectingEstimation.id} rejected.`);
+      setSuccessMessage(`${rejectionSubject} rejected.`);
       setRejectingEstimation(null);
       setRejectionReason("");
       await loadApprovals();
@@ -277,18 +315,26 @@ export function PendingEstimationApprovals() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-amber-50">
-                  {estimations.map((estimation) => (
-                    <tr
-                      key={estimation.id}
-                      className="bg-white transition hover:bg-amber-50/30"
-                    >
+                  {estimations.map((estimation) => {
+                    const solution = solutionsById[estimation.solution_id];
+                    const opportunity = solution
+                      ? opportunitiesById[solution.opportunity_id]
+                      : undefined;
+
+                    return (
+                      <tr
+                        key={estimation.id}
+                        className="bg-white transition hover:bg-amber-50/30"
+                      >
                       <td className="px-4 py-4">
                         <p className="font-semibold text-slate-800">
-                          {solutionsById[estimation.solution_id]
-                            ?.solution_name ?? `Solution #${estimation.solution_id}`}
+                          {solution?.solution_name ??
+                            `Solution #${estimation.solution_id}`}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
-                          Estimation #{estimation.id} ·{" "}
+                          {opportunity?.client_name ??
+                            opportunity?.opportunity_name ??
+                            `Estimation #${estimation.id}`} ·{" "}
                           {formatLabel(estimation.estimation_model)}
                         </p>
                       </td>
@@ -352,8 +398,9 @@ export function PendingEstimationApprovals() {
                           </Button>
                         </div>
                       </td>
-                    </tr>
-                  ))}
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -378,7 +425,15 @@ export function PendingEstimationApprovals() {
                   Reject Estimation
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Estimation #{rejectingEstimation.id}
+                  {
+                    getEstimationContext(rejectingEstimation)
+                      .solutionName
+                  }
+                </p>
+                <p className="mt-1 text-xs text-slate-400">
+                  {getEstimationContext(rejectingEstimation)
+                    .clientName ?? "Client not available"} ·{" "}
+                  {formatLabel(rejectingEstimation.estimation_model)}
                 </p>
               </div>
               <Button

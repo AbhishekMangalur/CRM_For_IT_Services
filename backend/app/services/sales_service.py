@@ -196,6 +196,28 @@ def validate_opportunity_relations(
         )
 
 
+def convert_lead_for_closed_won_opportunity(
+    db: Session,
+    opportunity: Opportunity,
+    data: dict[str, Any],
+) -> None:
+    next_pipeline_stage = data.get(
+        "pipeline_stage",
+        opportunity.pipeline_stage,
+    )
+
+    if next_pipeline_stage != "CLOSED_WON":
+        return
+
+    lead_id = data.get("lead_id", opportunity.lead_id)
+
+    if lead_id is None:
+        return
+
+    lead = require_lead(db, lead_id)
+    lead.lead_status = "CONVERTED"
+
+
 def create_opportunity(
     db: Session,
     data: dict[str, Any],
@@ -242,6 +264,12 @@ def update_opportunity(
         data["deal_value"] = Decimal("0.00")
 
     validate_opportunity_relations(db, data)
+
+    convert_lead_for_closed_won_opportunity(
+        db,
+        opportunity,
+        data,
+    )
 
     try:
         return update_record(db, opportunity, data)

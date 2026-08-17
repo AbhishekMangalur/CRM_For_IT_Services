@@ -8,6 +8,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -439,6 +440,19 @@ class Proposal(Base):
     proposal_document_url: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
+    )
+
+    sow_document_filename: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    sow_document_content: Mapped[bytes | None] = mapped_column(
+        LargeBinary, nullable=True, deferred=True
+    )
+    proposal_document_filename: Mapped[str | None] = mapped_column(
+        String(255), nullable=True
+    )
+    proposal_document_content: Mapped[bytes | None] = mapped_column(
+        LargeBinary, nullable=True, deferred=True
     )
 
     submission_date: Mapped[date | None] = mapped_column(
