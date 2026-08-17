@@ -10,6 +10,7 @@ from app.dependencies.auth import get_current_user
 from app.services.executive_kpi_service import (
     get_account_expansion_revenue_kpi,
     get_partner_influenced_pipeline_kpi,
+    get_revenue_by_partner_kpi,
     get_rfp_turnaround_kpi,
 )
 
@@ -21,6 +22,13 @@ router = APIRouter(
         Depends(get_current_user)
     ],
 )
+
+
+@router.get("/revenue-by-partner")
+def get_revenue_by_partner_api(
+    db: Session = Depends(get_db),
+):
+    return get_revenue_by_partner_kpi(db)
 
 
 # =========================================================

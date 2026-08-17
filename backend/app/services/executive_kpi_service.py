@@ -5,7 +5,7 @@ from sqlalchemy import extract, func
 from sqlalchemy.orm import Session
 
 from app.models.account_director import AccountOpportunity
-from app.models.alliance import PartnerInfluencedOpportunity
+from app.models.alliance import Partner, PartnerInfluencedOpportunity
 from app.models.rfp import RFP
 
 
@@ -107,7 +107,45 @@ def get_rfp_turnaround_kpi(
 
 
 # =========================================================
-# 2. ACCOUNT EXPANSION REVENUE
+# 2. REVENUE BY PARTNER
+# =========================================================
+
+
+def get_revenue_by_partner_kpi(
+    db: Session,
+):
+    """Sum influenced value per partner, including partners with no value."""
+
+    revenue = func.coalesce(
+        func.sum(PartnerInfluencedOpportunity.influenced_value),
+        0,
+    )
+
+    rows = (
+        db.query(
+            Partner.name.label("partner_name"),
+            revenue.label("revenue"),
+        )
+        .outerjoin(
+            PartnerInfluencedOpportunity,
+            PartnerInfluencedOpportunity.partner_id == Partner.id,
+        )
+        .group_by(Partner.id, Partner.name)
+        .order_by(revenue.desc(), Partner.name.asc())
+        .all()
+    )
+
+    return [
+        {
+            "partner_name": row.partner_name,
+            "revenue": float(row.revenue or 0),
+        }
+        for row in rows
+    ]
+
+
+# =========================================================
+# 3. ACCOUNT EXPANSION REVENUE
 # =========================================================
 
 

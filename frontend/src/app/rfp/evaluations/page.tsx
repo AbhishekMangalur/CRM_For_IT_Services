@@ -195,6 +195,30 @@ function getRecommendationClasses(
   }
 }
 
+function getScoreClasses(score: number): string {
+  if (score >= 75) {
+    return "text-emerald-700";
+  }
+
+  if (score >= 50) {
+    return "text-amber-600";
+  }
+
+  return "text-red-800";
+}
+
+function getScoreBarClasses(score: number): string {
+  if (score >= 75) {
+    return "bg-emerald-600";
+  }
+
+  if (score >= 50) {
+    return "bg-amber-500";
+  }
+
+  return "bg-red-700";
+}
+
 function evaluationToForm(
   evaluation: BidEvaluation,
 ): EvaluationFormState {
@@ -1523,6 +1547,27 @@ export default function RfpEvaluationsPage() {
                 </select>
               </div>
 
+              <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold">
+                <span className="text-slate-500">
+                  Score legend:
+                </span>
+
+                <span className="inline-flex items-center gap-2 text-emerald-700">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+                  75–100 High
+                </span>
+
+                <span className="inline-flex items-center gap-2 text-amber-700">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                  50–74 Needs attention
+                </span>
+
+                <span className="inline-flex items-center gap-2 text-red-800">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-700" />
+                  Below 50 Low
+                </span>
+              </div>
+
               {/* TABLE */}
 
               {isLoading ? (
@@ -1624,31 +1669,31 @@ export default function RfpEvaluationsPage() {
 
                               {/* SCORES */}
 
-                              <td className="px-4 py-4 font-medium text-slate-700">
+                              <td className={`px-4 py-4 font-bold ${getScoreClasses(evaluation.strategic_fit_score)}`}>
                                 {
                                   evaluation.strategic_fit_score
                                 }
                               </td>
 
-                              <td className="px-4 py-4 font-medium text-slate-700">
+                              <td className={`px-4 py-4 font-bold ${getScoreClasses(evaluation.technical_fit_score)}`}>
                                 {
                                   evaluation.technical_fit_score
                                 }
                               </td>
 
-                              <td className="px-4 py-4 font-medium text-slate-700">
+                              <td className={`px-4 py-4 font-bold ${getScoreClasses(evaluation.resource_availability_score)}`}>
                                 {
                                   evaluation.resource_availability_score
                                 }
                               </td>
 
-                              <td className="px-4 py-4 font-medium text-slate-700">
+                              <td className={`px-4 py-4 font-bold ${getScoreClasses(evaluation.profitability_score)}`}>
                                 {
                                   evaluation.profitability_score
                                 }
                               </td>
 
-                              <td className="px-4 py-4 font-medium text-slate-700">
+                              <td className={`px-4 py-4 font-bold ${getScoreClasses(evaluation.win_probability)}`}>
                                 {
                                   evaluation.win_probability
                                 }
@@ -1661,7 +1706,7 @@ export default function RfpEvaluationsPage() {
                                 <div className="flex items-center gap-2">
                                   <div className="h-2 w-20 overflow-hidden rounded-full bg-blue-100">
                                     <div
-                                      className="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-700"
+                                      className={`h-full rounded-full ${getScoreBarClasses(evaluation.overall_score)}`}
                                       style={{
                                         width: `${Math.min(
                                           100,
@@ -1674,7 +1719,7 @@ export default function RfpEvaluationsPage() {
                                     />
                                   </div>
 
-                                  <span className="font-bold text-blue-700">
+                                  <span className={`font-bold ${getScoreClasses(evaluation.overall_score)}`}>
                                     {evaluation.overall_score.toFixed(
                                       1,
                                     )}

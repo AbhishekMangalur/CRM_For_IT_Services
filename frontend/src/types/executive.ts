@@ -102,6 +102,11 @@ export interface PartnerInfluencedPipelineKpi {
   total_tier_points: number;
 }
 
+export interface RevenueByPartnerKpi {
+  partner_name: string;
+  revenue: number;
+}
+
 export interface ExecutiveDashboardData {
   latest: ExecutiveKpiSnapshot | null;
   history: ExecutiveKpiSnapshot[];

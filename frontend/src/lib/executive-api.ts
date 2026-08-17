@@ -8,6 +8,7 @@ import type {
   GenerateExecutiveKpiSnapshotRequest,
   PartnerInfluencedPipelineKpi,
   RfpTurnaroundKpi,
+  RevenueByPartnerKpi,
 } from "@/types/executive";
 
 interface ListQueryParams {
@@ -33,6 +34,16 @@ export const EXECUTIVE_ENDPOINTS = {
 export async function getRfpTurnaroundKpi(): Promise<RfpTurnaroundKpi> {
   const response = await api.get<RfpTurnaroundKpi>(
     `${EXECUTIVE_ENDPOINTS.KPIS}/rfp-turnaround`,
+  );
+
+  return response.data;
+}
+
+export async function getRevenueByPartnerKpi(): Promise<
+  RevenueByPartnerKpi[]
+> {
+  const response = await api.get<RevenueByPartnerKpi[]>(
+    `${EXECUTIVE_ENDPOINTS.KPIS}/revenue-by-partner`,
   );
 
   return response.data;

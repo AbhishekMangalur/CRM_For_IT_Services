@@ -1115,6 +1115,27 @@ export default function AccountDirectorHealthPage() {
                 </select>
               </div>
 
+              <div className="mb-5 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold">
+                <span className="text-slate-500">
+                  Health score legend:
+                </span>
+
+                <span className="inline-flex items-center gap-2 text-emerald-700">
+                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                  75–100 Green
+                </span>
+
+                <span className="inline-flex items-center gap-2 text-amber-700">
+                  <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
+                  50–74 Yellow
+                </span>
+
+                <span className="inline-flex items-center gap-2 text-red-700">
+                  <span className="h-2.5 w-2.5 rounded-full bg-red-500" />
+                  Below 50 Red
+                </span>
+              </div>
+
               {isLoading ? (
                 <div className="flex min-h-64 items-center justify-center">
                   <Loader2 className="h-7 w-7 animate-spin text-blue-700" />

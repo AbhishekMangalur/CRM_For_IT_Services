@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+
 import {
   Bar,
   BarChart,
@@ -25,7 +27,9 @@ import {
 
 import type {
   ExecutiveKpiSnapshot,
+  RevenueByPartnerKpi,
 } from "@/types/executive";
+import { getRevenueByPartnerKpi } from "@/lib/executive-api";
 
 interface ExecutiveChartsProps {
   latest: ExecutiveKpiSnapshot;
@@ -57,6 +61,31 @@ export function ExecutiveCharts({
   latest,
   history,
 }: ExecutiveChartsProps) {
+  const [partnerRevenue, setPartnerRevenue] = useState<
+    RevenueByPartnerKpi[]
+  >([]);
+  const [isLoadingPartnerRevenue, setIsLoadingPartnerRevenue] =
+    useState(true);
+
+  const loadPartnerRevenue = useCallback(async (): Promise<void> => {
+    setIsLoadingPartnerRevenue(true);
+
+    try {
+      setPartnerRevenue(await getRevenueByPartnerKpi());
+    } catch {
+      setPartnerRevenue([]);
+    } finally {
+      setIsLoadingPartnerRevenue(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadPartnerRevenue();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadPartnerRevenue]);
   /*
    * Sort oldest -> newest because charts
    * should move chronologically left -> right.
@@ -114,6 +143,7 @@ export function ExecutiveCharts({
       {/* PIPELINE / FORECAST LINE GRAPH */}
       {/* ================================================= */}
 
+      <div className="grid gap-6 xl:grid-cols-2">
       <Card className="rounded-2xl border-blue-100 bg-white/90 shadow-lg shadow-blue-100/30">
         <CardHeader className="border-b border-blue-50">
           <CardTitle className="text-lg font-bold text-slate-800">
@@ -219,6 +249,66 @@ export function ExecutiveCharts({
           )}
         </CardContent>
       </Card>
+
+      <Card className="rounded-2xl border-emerald-100 bg-white/90 shadow-lg shadow-emerald-100/30">
+        <CardHeader className="border-b border-emerald-50">
+          <CardTitle className="text-lg font-bold text-slate-800">
+            Revenue by Partner
+          </CardTitle>
+          <p className="text-sm text-slate-500">
+            Total influenced value grouped by alliance partner.
+          </p>
+        </CardHeader>
+
+        <CardContent className="p-5">
+          {isLoadingPartnerRevenue ? (
+            <div className="flex h-[340px] items-center justify-center text-sm text-slate-500">
+              Loading partner revenue...
+            </div>
+          ) : partnerRevenue.length === 0 ? (
+            <div className="flex h-[340px] items-center justify-center text-center text-sm text-slate-500">
+              No partner data is available.
+            </div>
+          ) : (
+            <div className="h-[340px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={partnerRevenue}
+                  margin={{ top: 10, right: 20, bottom: 10, left: 20 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="partner_name"
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tickFormatter={formatFullNumber}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip
+                    formatter={(value) =>
+                      new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      }).format(Number(value))
+                    }
+                  />
+                  <Bar
+                    dataKey="revenue"
+                    name="Partner Revenue"
+                    fill="#059669"
+                    radius={[6, 6, 0, 0]}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      </div>
 
       {/* ================================================= */}
       {/* UTILIZATION + WORKFORCE */}
