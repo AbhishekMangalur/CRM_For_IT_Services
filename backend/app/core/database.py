@@ -2,6 +2,7 @@ from collections.abc import Generator
 
 from sqlalchemy import (
     create_engine,
+    inspect,
     or_,
     text,
     update,
@@ -115,3 +116,39 @@ def normalize_currency_to_usd() -> None:
                         "SET DEFAULT 'USD'"
                     )
                 )
+
+
+def ensure_rfp_completed_at_column() -> None:
+    """Add and backfill the RFP completion timestamp for existing databases."""
+
+    with engine.begin() as connection:
+        inspector = inspect(connection)
+
+        if "rfps" not in inspector.get_table_names():
+            return
+
+        column_names = {
+            column["name"]
+            for column in inspector.get_columns("rfps")
+        }
+
+        if "completed_at" not in column_names:
+            column_type = (
+                "TIMESTAMP WITH TIME ZONE"
+                if connection.dialect.name == "postgresql"
+                else "DATETIME"
+            )
+            connection.execute(
+                text(
+                    "ALTER TABLE rfps ADD COLUMN completed_at "
+                    f"{column_type} NULL"
+                )
+            )
+
+        connection.execute(
+            text(
+                "UPDATE rfps SET completed_at = updated_at "
+                "WHERE completed_at IS NULL "
+                "AND rfp_status IN ('SUBMITTED', 'WON', 'LOST')"
+            )
+        )

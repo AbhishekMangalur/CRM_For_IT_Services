@@ -133,6 +133,11 @@ class RFP(Base):
         onupdate=func.now(),
     )
 
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
     owner: Mapped["User"] = relationship(
         "User",
         foreign_keys=[owner_id],

@@ -18,11 +18,8 @@ def get_rfp_turnaround_kpi(
     db: Session,
 ):
     """
-    For the POC:
-    turnaround =
-    RFP updated_at date - received_date
-
-    Only completed/submitted RFPs are considered.
+    Compare the planned response window with the actual completion time.
+    Only RFPs with a recorded completion timestamp are considered.
     """
 
     rfps = (
@@ -45,13 +42,17 @@ def get_rfp_turnaround_kpi(
 
         if (
             rfp.received_date is None
-            or rfp.updated_at is None
+            or rfp.completed_at is None
         ):
             continue
 
         completed_date = (
-            rfp.updated_at.date()
+            rfp.completed_at.date()
         )
+
+        planned_turnaround_days = (
+            rfp.submission_deadline - rfp.received_date
+        ).days
 
         turnaround_days = (
             completed_date
@@ -68,6 +69,10 @@ def get_rfp_turnaround_kpi(
                         rfp.received_date,
                     "completed_date":
                         completed_date,
+                    "submission_deadline":
+                        rfp.submission_deadline,
+                    "planned_turnaround_days":
+                        planned_turnaround_days,
                     "turnaround_days":
                         turnaround_days,
                 }

@@ -73,6 +73,8 @@ export interface RfpTurnaroundItem {
   title: string;
   received_date: string;
   completed_date: string;
+  submission_deadline: string;
+  planned_turnaround_days: number;
   turnaround_days: number;
 }
 

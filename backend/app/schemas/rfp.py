@@ -237,6 +237,7 @@ class RFPResponse(BaseModel):
     owner_id: int
     created_at: datetime
     updated_at: datetime
+    completed_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 

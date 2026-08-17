@@ -24,7 +24,12 @@ from app.routes.customer_health_import import router as customer_health_import_r
 from app.routes.financial_import import router as financial_import_router
 from app.routes.executive_kpi import router as executive_kpi_router
 from app.routes.presales_template import router as presales_template_router
-from app.core.database import Base, engine, normalize_currency_to_usd
+from app.core.database import (
+    Base,
+    engine,
+    ensure_rfp_completed_at_column,
+    normalize_currency_to_usd,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +45,7 @@ app = FastAPI(
 def create_tables() -> None:
     try:
         Base.metadata.create_all(bind=engine)
+        ensure_rfp_completed_at_column()
         normalize_currency_to_usd()
         app.state.database_available = True
     except SQLAlchemyError as error:

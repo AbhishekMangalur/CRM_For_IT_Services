@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -114,6 +115,27 @@ def normalize_rfp_data(
     return data
 
 
+COMPLETED_RFP_STATUSES = {"SUBMITTED", "WON", "LOST"}
+
+
+def apply_rfp_completion_timestamp(
+    data: dict[str, Any],
+    existing_rfp: RFP | None = None,
+) -> dict[str, Any]:
+    next_status = data.get(
+        "rfp_status",
+        existing_rfp.rfp_status if existing_rfp else "RECEIVED",
+    )
+
+    if next_status in COMPLETED_RFP_STATUSES:
+        if existing_rfp is None or existing_rfp.completed_at is None:
+            data["completed_at"] = datetime.now(timezone.utc)
+    else:
+        data["completed_at"] = None
+
+    return data
+
+
 def validate_rfp(
     db: Session,
     data: dict[str, Any],
@@ -208,6 +230,7 @@ def create_rfp(
     data: dict[str, Any],
 ) -> RFP:
     data = normalize_rfp_data(data)
+    data = apply_rfp_completion_timestamp(data)
 
     validate_rfp(
         db,
@@ -281,6 +304,7 @@ def update_rfp(
     )
 
     data = normalize_rfp_data(data)
+    data = apply_rfp_completion_timestamp(data, existing_rfp=rfp)
 
     validate_rfp(
         db,

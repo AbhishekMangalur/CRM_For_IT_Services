@@ -182,8 +182,10 @@ export function ExecutiveSuccessKpis() {
                         <th className="px-3 py-3">RFP Number</th>
                         <th className="px-3 py-3">Title</th>
                         <th className="px-3 py-3">Received</th>
+                        <th className="px-3 py-3">Deadline</th>
                         <th className="px-3 py-3">Completed</th>
-                        <th className="px-3 py-3">Days</th>
+                        <th className="px-3 py-3">Planned Days</th>
+                        <th className="px-3 py-3">Actual Days</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-blue-50">
@@ -199,7 +201,13 @@ export function ExecutiveSuccessKpis() {
                             {formatDate(rfp.received_date)}
                           </td>
                           <td className="px-3 py-3 text-slate-600">
+                            {formatDate(rfp.submission_deadline)}
+                          </td>
+                          <td className="px-3 py-3 text-slate-600">
                             {formatDate(rfp.completed_date)}
+                          </td>
+                          <td className="px-3 py-3 font-semibold text-slate-700">
+                            {rfp.planned_turnaround_days}
                           </td>
                           <td className="px-3 py-3 font-semibold text-blue-700">
                             {rfp.turnaround_days}
