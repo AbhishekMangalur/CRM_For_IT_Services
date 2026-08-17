@@ -1190,6 +1190,67 @@ export default function ExecutiveDashboardPage() {
                   </CardContent>
                 </Card>
 
+                {/* ================================================= */}
+                {/* SECONDARY / SOURCE NOT ENABLED */}
+                {/* ================================================= */}
+
+                <Card className="rounded-2xl border-slate-200 bg-slate-50/70">
+                  <CardHeader>
+                    <CardTitle className="text-base text-slate-800">
+                      Additional Revenue Metrics
+                    </CardTitle>
+                  </CardHeader>
+
+                  <CardContent>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-3">
+                          <WalletCards className="h-5 w-5 text-slate-500" />
+
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              Actual Revenue
+                            </p>
+
+                            <p className="mt-1 text-xl font-bold text-slate-800">
+                              {formatCurrency(
+                                financialSummary?.actual_revenue ?? 0,
+                                financialSummary?.currency ?? "USD",
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="mt-3 text-xs text-slate-400">
+                          Revenue imported from ERP financial actuals.
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex items-center gap-3">
+                          <TrendingUp className="h-5 w-5 text-slate-500" />
+
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              Partner Influenced Pipeline
+                            </p>
+
+                            <p className="mt-1 text-xl font-bold text-slate-800">
+                              {formatCurrency(
+                                latest.partner_influenced_pipeline,
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        <p className="mt-3 text-xs text-slate-400">
+                          Total value of active partner-influenced
+                          opportunities.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>
