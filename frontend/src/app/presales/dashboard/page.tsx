@@ -172,8 +172,10 @@ function getProposalStatusClasses(
 
 function SolutionRow({
   solution,
+  opportunityName,
 }: {
   solution: Solution;
+  opportunityName?: string;
 }) {
   return (
     <div className="rounded-xl border border-blue-100 bg-white p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-blue-50/60 hover:shadow-md">
@@ -189,7 +191,7 @@ function SolutionRow({
             </p>
 
             <p className="mt-1 text-sm text-slate-500">
-              Opportunity #{solution.opportunity_id}
+              {opportunityName ?? `Opportunity #${solution.opportunity_id}`}
             </p>
 
             <p className="mt-2 line-clamp-2 text-sm text-slate-500">
@@ -244,15 +246,17 @@ function SolutionRow({
 
 function EstimationRow({
   estimation,
+  solutionName,
 }: {
   estimation: Estimation;
+  solutionName?: string;
 }) {
   return (
     <div className="rounded-xl border border-blue-100 bg-white p-4 transition hover:bg-blue-50/50 hover:shadow-md">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="font-semibold text-slate-800">
-            Solution #{estimation.solution_id}
+            {solutionName ?? `Solution #${estimation.solution_id}`}
           </p>
 
           <p className="mt-1 text-sm text-slate-500">
@@ -704,6 +708,11 @@ export default function PresalesDashboardPage() {
                             <SolutionRow
                               key={solution.id}
                               solution={solution}
+                              opportunityName={
+                                metrics.opportunityNames[
+                                  solution.opportunity_id
+                                ]
+                              }
                             />
                           ),
                         )
@@ -750,6 +759,12 @@ export default function PresalesDashboardPage() {
                             <EstimationRow
                               key={estimation.id}
                               estimation={estimation}
+                              solutionName={
+                                data?.solutions.find(
+                                  (solution) =>
+                                    solution.id === estimation.solution_id,
+                                )?.solution_name
+                              }
                             />
                           ),
                         )

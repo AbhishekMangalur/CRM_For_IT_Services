@@ -13,6 +13,7 @@ import {
   getResourceRequirements,
   getSolutions,
 } from "@/lib/presales-api";
+import { getSalesOpportunities } from "@/lib/sales-api";
 
 import type {
   Estimation,
@@ -50,6 +51,8 @@ interface DashboardMetrics {
   expectedProfit: number;
 
   averageMargin: number;
+
+  opportunityNames: Record<number, string>;
 
   recentSolutions: Solution[];
 
@@ -133,6 +136,7 @@ export function usePresalesDashboard(): PresalesDashboardResult {
           estimations,
           resourceRequirements,
           proposals,
+          opportunities,
         ] = await Promise.all([
           getSolutions(),
 
@@ -141,6 +145,8 @@ export function usePresalesDashboard(): PresalesDashboardResult {
           getResourceRequirements(),
 
           getProposals(),
+
+          getSalesOpportunities(),
         ]);
 
         setData({
@@ -272,6 +278,13 @@ export function usePresalesDashboard(): PresalesDashboardResult {
           averageMargin:
             avgMargin,
 
+          opportunityNames: Object.fromEntries(
+            opportunities.map((opportunity) => [
+              opportunity.id,
+              opportunity.opportunity_name,
+            ]),
+          ),
+
           recentSolutions:
             [...solutions]
               .sort(
@@ -332,7 +345,11 @@ export function usePresalesDashboard(): PresalesDashboardResult {
     }, []);
 
   useEffect(() => {
-    void refresh();
+    const timeoutId = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [refresh]);
 
   return {

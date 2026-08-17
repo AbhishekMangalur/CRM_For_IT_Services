@@ -10,7 +10,6 @@ import {
 import axios from "axios";
 import {
   Activity,
-  AlertTriangle,
   BriefcaseBusiness,
   Building2,
   CalendarClock,
@@ -670,7 +669,6 @@ export default function ExecutiveDashboardPage() {
                       <p className="mt-2 text-xl font-bold text-slate-800">
                         {formatCurrency(
                           financialSummary.actual_revenue,
-                          financialSummary.currency,
                         )}
                       </p>
                     </div>
@@ -679,7 +677,6 @@ export default function ExecutiveDashboardPage() {
                       <p className="mt-2 text-xl font-bold text-slate-800">
                         {formatCurrency(
                           financialSummary.actual_cost,
-                          financialSummary.currency,
                         )}
                       </p>
                     </div>
@@ -688,7 +685,6 @@ export default function ExecutiveDashboardPage() {
                       <p className="mt-2 text-xl font-bold text-emerald-700">
                         {formatCurrency(
                           financialSummary.actual_profit,
-                          financialSummary.currency,
                         )}
                       </p>
                     </div>
@@ -702,8 +698,6 @@ export default function ExecutiveDashboardPage() {
                 ) : null}
               </CardContent>
             </Card>
-
-            <ExecutiveSuccessKpis />
 
             {!latest && !isLoading ? (
               <Card className="rounded-2xl border-amber-100 bg-amber-50/70">
@@ -817,14 +811,136 @@ export default function ExecutiveDashboardPage() {
                   />
                 </section>
 
-                <PendingEstimationApprovals />
-
-                <PendingProposalApprovals />
-
                 <ExecutiveCharts
                   latest={latest}
                   history={history}
                 />
+
+                <ExecutiveSuccessKpis />
+
+                <Card className="rounded-2xl border-slate-200 bg-white/90 shadow-lg shadow-slate-200/40">
+                  <CardHeader className="border-b border-slate-100">
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Executive Insights
+                    </CardTitle>
+                    <p className="text-sm text-slate-500">
+                      Decision signals calculated from the latest KPI snapshot.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Forecast conversion
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-slate-900">
+                        {Number(latest.total_pipeline_value) > 0
+                          ? `${(
+                              (Number(latest.forecast_revenue) /
+                                Number(latest.total_pipeline_value)) *
+                              100
+                            ).toFixed(1)}%`
+                          : "0.0%"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Forecast revenue as a share of pipeline
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Account risk
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-slate-900">
+                        {latest.healthy_accounts + latest.at_risk_accounts > 0
+                          ? `${(
+                              (latest.at_risk_accounts /
+                                (latest.healthy_accounts +
+                                  latest.at_risk_accounts)) *
+                              100
+                            ).toFixed(1)}%`
+                          : "0.0%"}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {latest.at_risk_accounts} accounts currently at risk
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Renewal exposure
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-slate-900">
+                        {latest.contracts_due_for_renewal}
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        Contracts approaching renewal
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs uppercase tracking-wide text-slate-500">
+                        Capacity signal
+                      </p>
+                      <p className="mt-2 text-2xl font-bold text-slate-900">
+                        {latest.resource_utilization_percentage.toFixed(1)}%
+                      </p>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {latest.available_employees} employees available
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="rounded-2xl border-slate-200 bg-white/90 shadow-lg shadow-slate-200/30">
+                  <CardHeader className="border-b border-slate-100">
+                    <CardTitle className="text-lg font-bold text-slate-900">
+                      Additional Revenue Metrics
+                    </CardTitle>
+                    <p className="text-sm text-slate-500">
+                      Revenue actuals and partner contribution at a glance.
+                    </p>
+                  </CardHeader>
+
+                  <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-3">
+                        <WalletCards className="h-5 w-5 text-slate-500" />
+                        <div>
+                          <p className="text-xs text-slate-500">
+                            Actual Revenue
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-slate-900">
+                            {formatCurrency(
+                              financialSummary?.actual_revenue ?? 0,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-slate-500">
+                        Revenue imported from ERP financial actuals.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="h-5 w-5 text-slate-500" />
+                        <div>
+                          <p className="text-xs text-slate-500">
+                            Partner Influenced Pipeline
+                          </p>
+                          <p className="mt-1 text-xl font-bold text-slate-900">
+                            {formatCurrency(
+                              latest.partner_influenced_pipeline,
+                            )}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-slate-500">
+                        Total value of active partner-influenced opportunities.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* ================================================= */}
                 {/* CUSTOMER + EMPLOYEE SUMMARY */}
@@ -1069,74 +1185,21 @@ export default function ExecutiveDashboardPage() {
                   </Card>
                 </section>
 
-                {/* ================================================= */}
-                {/* REVENUE / PIPELINE */}
-                {/* ================================================= */}
+                <section className="space-y-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900">
+                      Executive Decision Queue
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Review items requiring leadership action after the
+                      analytics overview.
+                    </p>
+                  </div>
 
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  <Card className="rounded-2xl border-blue-100 bg-gradient-to-br from-blue-600 to-indigo-800 text-white shadow-lg">
-                    <CardContent className="p-5">
-                      <p className="text-sm text-blue-100">
-                        Account Expansion Revenue
-                      </p>
-
-                      <p className="mt-2 text-3xl font-bold">
-                        {formatCurrency(
-                          latest.account_expansion_revenue,
-                        )}
-                      </p>
-
-                      <TrendingUp className="mt-4 h-6 w-6 text-blue-100" />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-2xl border-indigo-100 bg-gradient-to-br from-indigo-600 to-violet-800 text-white shadow-lg">
-                    <CardContent className="p-5">
-                      <p className="text-sm text-indigo-100">
-                        Won Opportunities
-                      </p>
-
-                      <p className="mt-2 text-3xl font-bold">
-                        {
-                          latest.won_opportunities
-                        }
-                      </p>
-
-                      <CheckCircle2 className="mt-4 h-6 w-6 text-indigo-100" />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-2xl border-cyan-100 bg-gradient-to-br from-cyan-600 to-blue-700 text-white shadow-lg">
-                    <CardContent className="p-5">
-                      <p className="text-sm text-cyan-100">
-                        Pending Resource Requests
-                      </p>
-
-                      <p className="mt-2 text-3xl font-bold">
-                        {
-                          latest.pending_resource_requests
-                        }
-                      </p>
-
-                      <Users className="mt-4 h-6 w-6 text-cyan-100" />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-2xl border-emerald-100 bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-lg">
-                    <CardContent className="p-5">
-                      <p className="text-sm text-emerald-100">
-                        Pending Presales Approvals
-                      </p>
-
-                      <p className="mt-2 text-3xl font-bold">
-                        {
-                          latest.pending_presales_approvals
-                        }
-                      </p>
-
-                      <AlertTriangle className="mt-4 h-6 w-6 text-emerald-100" />
-                    </CardContent>
-                  </Card>
+                  <div className="grid gap-6 xl:grid-cols-2">
+                    <PendingEstimationApprovals />
+                    <PendingProposalApprovals />
+                  </div>
                 </section>
 
                 {/* ================================================= */}
@@ -1190,67 +1253,6 @@ export default function ExecutiveDashboardPage() {
                   </CardContent>
                 </Card>
 
-                {/* ================================================= */}
-                {/* SECONDARY / SOURCE NOT ENABLED */}
-                {/* ================================================= */}
-
-                <Card className="rounded-2xl border-slate-200 bg-slate-50/70">
-                  <CardHeader>
-                    <CardTitle className="text-base text-slate-800">
-                      Additional Revenue Metrics
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center gap-3">
-                          <WalletCards className="h-5 w-5 text-slate-500" />
-
-                          <div>
-                            <p className="text-xs text-slate-500">
-                              Actual Revenue
-                            </p>
-
-                            <p className="mt-1 text-xl font-bold text-slate-800">
-                              {formatCurrency(
-                                financialSummary?.actual_revenue ?? 0,
-                                financialSummary?.currency ?? "USD",
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="mt-3 text-xs text-slate-400">
-                          Revenue imported from ERP financial actuals.
-                        </p>
-                      </div>
-
-                      <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <div className="flex items-center gap-3">
-                          <TrendingUp className="h-5 w-5 text-slate-500" />
-
-                          <div>
-                            <p className="text-xs text-slate-500">
-                              Partner Influenced Pipeline
-                            </p>
-
-                            <p className="mt-1 text-xl font-bold text-slate-800">
-                              {formatCurrency(
-                                latest.partner_influenced_pipeline,
-                              )}
-                            </p>
-                          </div>
-                        </div>
-
-                        <p className="mt-3 text-xs text-slate-400">
-                          Total value of active partner-influenced
-                          opportunities.
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
               </>
             )}
           </div>

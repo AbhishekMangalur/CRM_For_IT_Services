@@ -781,8 +781,8 @@ function DealRegistrationDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Deal Registration #
-              {registration.id}
+              {partner?.name ?? "Partner unavailable"} ·{" "}
+              {opportunity?.opportunity_name ?? "Opportunity unavailable"}
             </p>
           </div>
 
@@ -851,7 +851,7 @@ function DealRegistrationDetailsModal({
             <p className="mt-1 font-semibold">
               {opportunity
                 ?.opportunity_name ??
-                `Opportunity #${registration.opportunity_id}`}
+                "Opportunity unavailable"}
             </p>
           </div>
 
@@ -1580,8 +1580,8 @@ export default function AllianceDealRegistrationsPage() {
                                   </p>
 
                                   <p className="text-xs text-slate-500">
-                                    Registration #
-                                    {registration.id}
+                                    {opportunity?.opportunity_name ??
+                                      "Opportunity unavailable"}
                                   </p>
                                 </div>
                               </div>
@@ -1601,7 +1601,7 @@ export default function AllianceDealRegistrationsPage() {
                             <td className="px-4 py-4 text-sm font-medium text-slate-700">
                               {opportunity
                                 ?.opportunity_name ??
-                                `Opportunity #${registration.opportunity_id}`}
+                                "Opportunity unavailable"}
                             </td>
 
                             <td className="px-4 py-4 text-sm text-slate-600">

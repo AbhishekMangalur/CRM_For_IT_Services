@@ -925,7 +925,7 @@ function OpportunityDetailsModal({
 
             <p className="mt-1 font-semibold">
               {lead?.company_name ??
-                `Lead #${opportunity.lead_id}`}
+                "Linked lead unavailable"}
             </p>
 
             {lead && (
@@ -1536,8 +1536,9 @@ export default function SalesOpportunitiesPage() {
                                   </p>
 
                                   <p className="text-xs text-slate-500">
-                                    Lead #
-                                    {opportunity.lead_id}
+                                    {findLead(opportunity.lead_id)
+                                      ?.contact_name ??
+                                      "Lead contact unavailable"}
                                   </p>
                                 </div>
                               </div>

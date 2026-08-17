@@ -356,7 +356,7 @@ function SkillDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Skill #{skill.id}
+              {skill.category}
             </p>
           </div>
 
@@ -501,7 +501,11 @@ export default function ResourceManagerSkillsPage() {
     }, []);
 
   useEffect(() => {
-    void loadSkills();
+    const timeoutId = window.setTimeout(() => {
+      void loadSkills();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadSkills]);
 
   const categories = useMemo(() => {
@@ -882,10 +886,6 @@ export default function ResourceManagerSkillsPage() {
                                 <div>
                                   <p className="font-semibold text-slate-800">
                                     {skill.name}
-                                  </p>
-
-                                  <p className="text-xs text-slate-500">
-                                    Skill #{skill.id}
                                   </p>
                                 </div>
                               </div>

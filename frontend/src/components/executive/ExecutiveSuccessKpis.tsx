@@ -48,9 +48,9 @@ function getErrorMessage(error: unknown): string {
 }
 
 function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "INR",
+    currency: "USD",
     maximumFractionDigits: 0,
   }).format(value);
 }

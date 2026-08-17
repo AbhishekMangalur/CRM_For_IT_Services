@@ -778,8 +778,8 @@ function CertificationDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Partner Certification #
-              {certification.id}
+              {partner?.name ?? "Partner unavailable"} ·{" "}
+              {employee?.full_name ?? "Employee unavailable"}
             </p>
           </div>
 
@@ -1125,7 +1125,11 @@ export default function AllianceCertificationsPage() {
     );
 
   useEffect(() => {
-    void loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadData]);
 
   /* ================================================= */
@@ -1778,8 +1782,7 @@ export default function AllianceCertificationsPage() {
                                   </p>
 
                                   <p className="mt-1 text-xs text-slate-500">
-                                    Certification #
-                                    {certification.id}
+                                    {certification.certification_number}
                                   </p>
                                 </div>
                               </div>

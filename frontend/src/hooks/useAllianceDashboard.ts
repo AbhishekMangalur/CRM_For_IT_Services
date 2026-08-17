@@ -10,6 +10,8 @@ import axios from "axios";
 import {
   getAllianceDashboardResources,
 } from "@/lib/alliance-api";
+import { getSalesOpportunities } from "@/lib/sales-api";
+import { getEmployees } from "@/lib/resource-manager-api";
 
 import type {
   AllianceDashboardData,
@@ -35,6 +37,9 @@ interface AllianceDashboardMetrics {
   totalExpectedIncentives: number;
   totalReferralFees: number;
   totalTierPoints: number;
+
+  opportunityNames: Record<number, string>;
+  employeeNames: Record<number, string>;
 
   activeCertifications: number;
   expiringSoonCertifications: number;
@@ -178,6 +183,8 @@ function buildMetrics(
   dealRegistrations: PartnerDealRegistration[],
   influencedOpportunities: PartnerInfluencedOpportunity[],
   certifications: PartnerCertification[],
+  opportunityNames: Record<number, string>,
+  employeeNames: Record<number, string>,
 ): AllianceDashboardMetrics {
   const activePartners =
     partners.filter(
@@ -316,6 +323,9 @@ function buildMetrics(
 
     totalTierPoints,
 
+    opportunityNames,
+    employeeNames,
+
     activeCertifications:
       activeCertifications.length,
 
@@ -372,13 +382,34 @@ export function useAllianceDashboard(): UseAllianceDashboardResult {
         setError(null);
 
         try {
-          const {
-            partners,
-            dealRegistrations,
-            influencedOpportunities,
-            certifications,
-          } =
-            await getAllianceDashboardResources();
+          const [
+            {
+              partners,
+              dealRegistrations,
+              influencedOpportunities,
+              certifications,
+            },
+            opportunities,
+            employees,
+          ] = await Promise.all([
+            getAllianceDashboardResources(),
+            getSalesOpportunities(),
+            getEmployees(),
+          ]);
+
+          const opportunityNames = Object.fromEntries(
+            opportunities.map((opportunity) => [
+              opportunity.id,
+              opportunity.opportunity_name,
+            ]),
+          );
+
+          const employeeNames = Object.fromEntries(
+            employees.map((employee) => [
+              employee.id,
+              employee.full_name,
+            ]),
+          );
 
           setData({
             partners,
@@ -393,6 +424,8 @@ export function useAllianceDashboard(): UseAllianceDashboardResult {
               dealRegistrations,
               influencedOpportunities,
               certifications,
+              opportunityNames,
+              employeeNames,
             ),
           );
         } catch (requestError) {
@@ -409,7 +442,11 @@ export function useAllianceDashboard(): UseAllianceDashboardResult {
     );
 
   useEffect(() => {
-    void refresh();
+    const timeoutId = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [refresh]);
 
   return {

@@ -130,10 +130,10 @@ def apply_margin_approval_rule(
         )
     )
 
-    if margin > MINIMUM_MARGIN_PERCENTAGE:
-        data["approval_status"] = "READY_FOR_PROPOSAL"
+    if margin >= MINIMUM_MARGIN_PERCENTAGE:
+        data["approval_status"] = "APPROVED"
         data["approved_by"] = None
-        data["approved_at"] = None
+        data["approved_at"] = datetime.now(timezone.utc)
         data["rejection_reason"] = None
     else:
         data["approval_status"] = "APPROVAL_REQUIRED"
@@ -497,7 +497,7 @@ def create_estimation(
         db.add(estimation)
         db.flush()
 
-        if estimation.approval_status == "READY_FOR_PROPOSAL":
+        if estimation.approval_status == "APPROVED":
             synchronize_estimation_commercial_values(
                 db,
                 estimation,
@@ -573,7 +573,7 @@ def update_estimation(
         for field_name, value in calculated_data.items():
             setattr(estimation, field_name, value)
 
-        if estimation.approval_status == "READY_FOR_PROPOSAL":
+        if estimation.approval_status == "APPROVED":
             synchronize_estimation_commercial_values(
                 db,
                 estimation,

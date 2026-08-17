@@ -204,9 +204,11 @@ function PartnerRow({
 function RegistrationRow({
   registration,
   partner,
+  opportunityName,
 }: {
   registration: PartnerDealRegistration;
   partner?: AlliancePartner;
+  opportunityName?: string;
 }) {
   return (
     <div className="rounded-xl border border-blue-100 bg-white p-4 transition hover:bg-blue-50/50 hover:shadow-md">
@@ -242,7 +244,7 @@ function RegistrationRow({
           </p>
 
           <p className="mt-1 font-semibold text-blue-700">
-            #{registration.opportunity_id}
+            {opportunityName ?? "Opportunity unavailable"}
           </p>
         </div>
 
@@ -336,9 +338,11 @@ function InfluenceRow({
 function CertificationRow({
   certification,
   partner,
+  employeeName,
 }: {
   certification: PartnerCertification;
   partner?: AlliancePartner;
+  employeeName?: string;
 }) {
   return (
     <div className="rounded-xl border border-blue-100 bg-white p-4 transition hover:bg-blue-50/50 hover:shadow-md">
@@ -370,7 +374,7 @@ function CertificationRow({
           </p>
 
           <p className="mt-1 font-semibold text-blue-700">
-            #{certification.employee_id}
+            {employeeName ?? "Employee unavailable"}
           </p>
         </div>
 
@@ -707,6 +711,11 @@ export default function AllianceDashboardPage() {
                             partner={findPartner(
                               registration.partner_id,
                             )}
+                            opportunityName={
+                              metrics.opportunityNames[
+                                registration.opportunity_id
+                              ]
+                            }
                           />
                         ),
                       )
@@ -801,6 +810,11 @@ export default function AllianceDashboardPage() {
                             partner={findPartner(
                               certification.partner_id,
                             )}
+                            employeeName={
+                              metrics.employeeNames[
+                                certification.employee_id
+                              ]
+                            }
                           />
                         ),
                       )

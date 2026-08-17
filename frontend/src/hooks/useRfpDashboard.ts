@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import axios from "axios";
+import { api } from "@/lib/api";
 
 import {
   getRfpDashboardResources,
@@ -42,6 +43,8 @@ interface RfpDashboardMetrics {
 
   totalAssignments: number;
   activeAssignments: number;
+
+  userNames: Record<number, string>;
 
   recentRfps: Rfp[];
   recentEvaluations: BidEvaluation[];
@@ -226,6 +229,7 @@ function buildMetrics(
   rfps: Rfp[],
   evaluations: BidEvaluation[],
   assignments: RfpAssignment[],
+  userNames: Record<number, string>,
 ): RfpDashboardMetrics {
   const pendingEvaluation =
     rfps.filter(
@@ -417,6 +421,8 @@ function buildMetrics(
     activeAssignments:
       activeAssignments.length,
 
+    userNames,
+
     recentRfps:
       sortByCreatedAt(
         rfps,
@@ -475,12 +481,21 @@ export function useRfpDashboard(): UseRfpDashboardResult {
         setError(null);
 
         try {
-          const {
-            rfps,
-            evaluations,
-            assignments,
-          } =
-            await getRfpDashboardResources();
+          const [
+            {
+              rfps,
+              evaluations,
+              assignments,
+            },
+            usersResponse,
+          ] = await Promise.all([
+            getRfpDashboardResources(),
+            api.get<Array<{ id: number; full_name: string }>>("/api/users"),
+          ]);
+
+          const userNames = Object.fromEntries(
+            usersResponse.data.map((user) => [user.id, user.full_name]),
+          );
 
           setData({
             rfps,
@@ -493,6 +508,7 @@ export function useRfpDashboard(): UseRfpDashboardResult {
               rfps,
               evaluations,
               assignments,
+              userNames,
             ),
           );
         } catch (requestError) {
@@ -509,7 +525,11 @@ export function useRfpDashboard(): UseRfpDashboardResult {
     );
 
   useEffect(() => {
-    void refresh();
+    const timeoutId = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [refresh]);
 
   return {

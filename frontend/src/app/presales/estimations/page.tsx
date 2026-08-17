@@ -183,6 +183,10 @@ function getApprovalClasses(
   }
 }
 
+function getDisplayedApprovalStatus(status: string): string {
+  return status === "READY_FOR_PROPOSAL" ? "APPROVED" : status;
+}
+
 function estimationToForm(
   estimation: Estimation,
 ): EstimationFormState {
@@ -688,7 +692,7 @@ function EstimationDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Estimation #{estimation.id}
+              {solution?.solution_name ?? "Linked solution unavailable"}
             </p>
           </div>
 
@@ -736,7 +740,7 @@ function EstimationDetailsModal({
 
             <p className="mt-1 font-semibold text-slate-800">
               {solution?.solution_name ??
-                `Solution #${estimation.solution_id}`}
+                "Linked solution unavailable"}
             </p>
           </div>
 
@@ -763,7 +767,7 @@ function EstimationDetailsModal({
               )}`}
             >
               {formatLabel(
-                estimation.approval_status,
+                getDisplayedApprovalStatus(estimation.approval_status),
               )}
             </Badge>
           </div>
@@ -776,7 +780,11 @@ function EstimationDetailsModal({
             <p className="mt-1 font-semibold text-slate-800">
               {estimation.approved_by
                 ? `User #${estimation.approved_by}`
-                : "Not approved"}
+                : getDisplayedApprovalStatus(
+                      estimation.approval_status,
+                    ) === "APPROVED"
+                  ? "Automatically approved"
+                  : "Not approved"}
             </p>
           </div>
 
@@ -1024,7 +1032,7 @@ export default function PresalesEstimationsPage() {
 
           const matchesApproval =
             approvalFilter === "ALL" ||
-            estimation.approval_status ===
+            getDisplayedApprovalStatus(estimation.approval_status) ===
               approvalFilter;
 
           const matchesModel =
@@ -1054,17 +1062,10 @@ export default function PresalesEstimationsPage() {
         "APPROVAL_REQUIRED",
     ).length;
 
-  const readyForProposalCount =
-    estimations.filter(
-      (estimation) =>
-        estimation.approval_status ===
-        "READY_FOR_PROPOSAL",
-    ).length;
-
   const approvedCount =
     estimations.filter(
       (estimation) =>
-        estimation.approval_status ===
+        getDisplayedApprovalStatus(estimation.approval_status) ===
         "APPROVED",
     ).length;
 
@@ -1217,13 +1218,11 @@ export default function PresalesEstimationsPage() {
             />
 
             <StatCard
-              title="Ready for Proposal"
-              value={readyForProposalCount.toLocaleString(
+              title="Approved"
+              value={approvedCount.toLocaleString(
                 "en-US",
               )}
-              description={`${approvedCount} approved estimation${
-                approvedCount === 1 ? "" : "s"
-              } already moved forward`}
+              description="Margin-qualified or Executive-approved estimations"
               icon={TrendingUp}
               variant="emerald"
             />
@@ -1331,10 +1330,6 @@ export default function PresalesEstimationsPage() {
                 >
                   <option value="ALL">
                     All approval statuses
-                  </option>
-
-                  <option value="READY_FOR_PROPOSAL">
-                    Ready for Proposal
                   </option>
 
                   <option value="APPROVAL_REQUIRED">
@@ -1456,12 +1451,7 @@ export default function PresalesEstimationsPage() {
                                   <div>
                                     <p className="font-semibold text-slate-800">
                                       {solution?.solution_name ??
-                                        `Solution #${estimation.solution_id}`}
-                                    </p>
-
-                                    <p className="text-xs text-slate-500">
-                                      Estimation #
-                                      {estimation.id}
+                                        "Linked solution unavailable"}
                                     </p>
                                   </div>
                                 </div>
@@ -1510,7 +1500,9 @@ export default function PresalesEstimationsPage() {
                                   )}
                                 >
                                   {formatLabel(
-                                    estimation.approval_status,
+                                    getDisplayedApprovalStatus(
+                                      estimation.approval_status,
+                                    ),
                                   )}
                                 </Badge>
                               </td>

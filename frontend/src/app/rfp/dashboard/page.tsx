@@ -285,7 +285,7 @@ function EvaluationRow({
           </p>
 
           <p className="mt-1 text-sm text-slate-500">
-            Evaluation #{evaluation.id}
+            Evaluated {formatDate(evaluation.created_at)}
           </p>
         </div>
 
@@ -332,9 +332,11 @@ function EvaluationRow({
 function AssignmentRow({
   assignment,
   rfp,
+  userName,
 }: {
   assignment: RfpAssignment;
   rfp?: Rfp;
+  userName?: string;
 }) {
   return (
     <div className="rounded-xl border border-cyan-100 bg-white p-4 transition hover:bg-cyan-50/40 hover:shadow-md">
@@ -370,7 +372,7 @@ function AssignmentRow({
           </p>
 
           <p className="mt-1 font-semibold text-blue-700">
-            #{assignment.user_id}
+            {userName ?? "User unavailable"}
           </p>
         </div>
 
@@ -1006,6 +1008,11 @@ export default function RfpDashboardPage() {
                               rfp={findRfp(
                                 assignment.rfp_id,
                               )}
+                              userName={
+                                metrics.userNames[
+                                  assignment.user_id
+                                ]
+                              }
                             />
                           ),
                         )

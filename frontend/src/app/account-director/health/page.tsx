@@ -1190,10 +1190,6 @@ export default function AccountDirectorHealthPage() {
                                       {account?.account_name ??
                                         `Account #${record.account_id}`}
                                     </p>
-
-                                    <p className="text-xs text-slate-500">
-                                      Record #{record.id}
-                                    </p>
                                   </div>
                                 </div>
                               </td>

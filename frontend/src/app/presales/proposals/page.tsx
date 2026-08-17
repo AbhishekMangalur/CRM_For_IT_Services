@@ -596,8 +596,8 @@ function ProposalDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Proposal #{proposal.id} · Version{" "}
-              {proposal.version}
+              {solution?.solution_name ?? "Linked solution unavailable"} ·
+              Version {proposal.version}
             </p>
           </div>
 
@@ -647,7 +647,7 @@ function ProposalDetailsModal({
 
             <p className="mt-1 font-semibold">
               {solution?.solution_name ??
-                `Solution #${proposal.solution_id}`}
+                "Linked solution unavailable"}
             </p>
           </div>
 
@@ -817,7 +817,11 @@ export default function PresalesProposalsPage() {
     }, []);
 
   useEffect(() => {
-    void loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadData]);
 
   /* ---------------- FILTERS ---------------- */
@@ -1341,11 +1345,6 @@ export default function PresalesProposalsPage() {
                                         proposal.proposal_title
                                       }
                                     </p>
-
-                                    <p className="text-xs text-slate-500">
-                                      Proposal #
-                                      {proposal.id}
-                                    </p>
                                   </div>
                                 </div>
                               </td>
@@ -1356,7 +1355,7 @@ export default function PresalesProposalsPage() {
 
                                   <span className="font-medium text-slate-700">
                                     {solution?.solution_name ??
-                                      `Solution #${proposal.solution_id}`}
+                                      "Linked solution unavailable"}
                                   </span>
                                 </div>
                               </td>
