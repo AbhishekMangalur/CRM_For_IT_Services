@@ -1,6 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
+
+from app.schemas.password import validate_password_strength
 
 
 class UserCreate(BaseModel):
@@ -8,6 +10,11 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8, max_length=128)
     role_id: int = Field(gt=0)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength_requirements(cls, password: str) -> str:
+        return validate_password_strength(password)
 
 
 class UserRoleResponse(BaseModel):

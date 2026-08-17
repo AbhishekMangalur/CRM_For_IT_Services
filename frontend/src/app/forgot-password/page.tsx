@@ -20,6 +20,10 @@ import {
 import {
   forgotPassword,
 } from "@/lib/auth-api";
+import {
+  isStrongPassword,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/password-validation";
 
 import {
   Alert,
@@ -112,6 +116,11 @@ export default function ForgotPasswordPage() {
 
     setError("");
     setSuccess("");
+
+    if (!isStrongPassword(form.new_password)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
+      return;
+    }
 
     if (
       form.new_password !==
@@ -311,6 +320,7 @@ export default function ForgotPasswordPage() {
                       )
                     }
                     disabled={loading}
+                    minLength={8}
                     required
                     autoComplete="email"
                   />
@@ -360,6 +370,9 @@ export default function ForgotPasswordPage() {
                     )}
                   </button>
                 </div>
+                <p className="text-xs text-slate-500">
+                  Use 8+ characters with at least one uppercase letter, one lowercase letter, one number, and one special character.
+                </p>
               </div>
 
               <div className="space-y-2">

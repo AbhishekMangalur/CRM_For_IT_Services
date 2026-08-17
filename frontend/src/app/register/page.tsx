@@ -20,6 +20,10 @@ import {
   registerUser,
   type RoleOption,
 } from "@/lib/auth-api";
+import {
+  isStrongPassword,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+} from "@/lib/password-validation";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -121,6 +125,11 @@ export default function RegisterPage() {
 
     setError("");
     setSuccess("");
+
+    if (!isStrongPassword(form.password)) {
+      setError(PASSWORD_REQUIREMENTS_MESSAGE);
+      return;
+    }
 
     if (
       form.password !==
@@ -300,6 +309,7 @@ export default function RegisterPage() {
                         e.target.value,
                       )
                     }
+                    minLength={8}
                     required
                   />
                 </div>
@@ -413,6 +423,9 @@ export default function RegisterPage() {
                     )}
                   </button>
                 </div>
+                <p className="text-xs text-slate-500">
+                  Use 8+ characters with at least one uppercase letter, one lowercase letter, one number, and one special character.
+                </p>
               </div>
 
               <div className="space-y-2">

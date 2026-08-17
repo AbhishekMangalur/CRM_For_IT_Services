@@ -1,4 +1,12 @@
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from pydantic import (
+    BaseModel,
+    EmailStr,
+    Field,
+    field_validator,
+    model_validator,
+)
+
+from app.schemas.password import validate_password_strength
 
 
 class LoginRequest(BaseModel):
@@ -54,6 +62,11 @@ class RegisterRequest(BaseModel):
         max_length=128,
     )
 
+    @field_validator("password")
+    @classmethod
+    def validate_password_strength_requirements(cls, password: str) -> str:
+        return validate_password_strength(password)
+
     @model_validator(mode="after")
     def validate_passwords(self):
         if self.password != self.confirm_password:
@@ -94,6 +107,11 @@ class ForgotPasswordRequest(BaseModel):
         min_length=8,
         max_length=128,
     )
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_password_strength_requirements(cls, password: str) -> str:
+        return validate_password_strength(password)
 
     @model_validator(mode="after")
     def validate_passwords(self):
