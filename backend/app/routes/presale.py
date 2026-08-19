@@ -28,6 +28,7 @@ from app.schemas.presale import (
     ProposalCreate,
     ProposalPatch,
     ProposalPut,
+    ProposalRejectionRequest,
     ProposalResponse,
     ResourceRequirementCreate,
     ResourceRequirementPatch,
@@ -656,13 +657,14 @@ def approve_proposal_api(
 )
 def reject_proposal_api(
     proposal_id: int,
-    remarks: str,
+    payload: ProposalRejectionRequest,
     db: Session = Depends(get_db),
 ):
     return reject_proposal(
         db,
         proposal_id,
-        remarks,
+        payload.approved_by,
+        payload.rejection_reason,
     )
 
 

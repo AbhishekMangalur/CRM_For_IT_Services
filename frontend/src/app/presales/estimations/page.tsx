@@ -1388,7 +1388,7 @@ export default function PresalesEstimationsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-blue-100">
-                  <table className="w-full min-w-[1400px] text-left">
+                  <table className="w-full min-w-[1650px] text-left">
                     <thead className="bg-blue-50/80 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
                         <th className="px-4 py-3">
@@ -1417,6 +1417,10 @@ export default function PresalesEstimationsPage() {
 
                         <th className="px-4 py-3">
                           Approval
+                        </th>
+
+                        <th className="px-4 py-3">
+                          Rejection Reason
                         </th>
 
                         <th className="px-4 py-3">
@@ -1505,6 +1509,20 @@ export default function PresalesEstimationsPage() {
                                     ),
                                   )}
                                 </Badge>
+                              </td>
+
+                              <td className="max-w-80 px-4 py-4 text-sm">
+                                {estimation.approval_status ===
+                                  "REJECTED" &&
+                                estimation.rejection_reason ? (
+                                  <p className="whitespace-normal text-red-700">
+                                    {estimation.rejection_reason}
+                                  </p>
+                                ) : (
+                                  <span className="text-slate-400">
+                                    —
+                                  </span>
+                                )}
                               </td>
 
                               <td className="px-4 py-4 text-sm text-slate-600">

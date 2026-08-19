@@ -1189,9 +1189,17 @@ def update_proposal(
         proposal_id,
     )
 
+    update_data = dict(data)
+
+    if proposal.approval_status == "REJECTED":
+        update_data["approval_status"] = "PENDING"
+        update_data["rejection_reason"] = None
+        if update_data.get("proposal_status") == "REJECTED":
+            update_data["proposal_status"] = "DRAFT"
+
     validate_proposal_relations(
         db,
-        data,
+        update_data,
         existing_proposal=proposal,
     )
 
@@ -1199,7 +1207,7 @@ def update_proposal(
         return update_record(
             db,
             proposal,
-            data,
+            update_data,
         )
     except IntegrityError as error:
         handle_integrity_error(db, error)
@@ -1227,6 +1235,7 @@ def submit_proposal(
         )
 
     proposal.proposal_status = "SUBMITTED"
+    proposal.approval_status = "PENDING"
 
     if proposal.submission_date is None:
         proposal.submission_date = date.today()
@@ -1248,6 +1257,7 @@ def approve_proposal(
 
     proposal.approval_status = "APPROVED"
     proposal.proposal_status = "ACCEPTED"
+    proposal.rejection_reason = None
 
     db.commit()
     db.refresh(proposal)
@@ -1258,22 +1268,43 @@ def approve_proposal(
 def reject_proposal(
     db: Session,
     proposal_id: int,
-    remarks: str,
+    approved_by: int,
+    rejection_reason: str,
 ) -> Proposal:
     proposal = require_proposal(
         db,
         proposal_id,
     )
 
-    if not remarks.strip():
+    approver = db.get(User, approved_by)
+
+    if not approver:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Approver user not found",
+        )
+
+    if not approver.is_active or not approver.role:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Remarks are required when rejecting a proposal",
+            detail="Approver must be an active user with an assigned role",
+        )
+
+    if approver.role.name not in {"ACCOUNT_DIRECTOR", "EXECUTIVE"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only ACCOUNT_DIRECTOR or EXECUTIVE can reject proposals",
+        )
+
+    if not rejection_reason.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Rejection reason is required",
         )
 
     proposal.approval_status = "REJECTED"
     proposal.proposal_status = "REJECTED"
-    proposal.remarks = remarks.strip()
+    proposal.rejection_reason = rejection_reason.strip()
 
     db.commit()
     db.refresh(proposal)

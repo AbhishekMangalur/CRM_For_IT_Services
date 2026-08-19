@@ -717,6 +717,18 @@ function ProposalDetailsModal({
             </p>
           </div>
 
+          {proposal.rejection_reason && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+              <p className="text-sm font-semibold text-red-800">
+                Rejection Reason
+              </p>
+
+              <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-red-700">
+                {proposal.rejection_reason}
+              </p>
+            </div>
+          )}
+
           <div className="rounded-xl border border-blue-100 p-4">
             <p className="text-xs text-slate-500">
               Created
@@ -1313,7 +1325,7 @@ export default function PresalesProposalsPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-blue-100">
-                  <table className="w-full min-w-[1350px] text-left">
+                  <table className="w-full min-w-[1600px] text-left">
                     <thead className="bg-blue-50/80 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
                         <th className="px-4 py-3">
@@ -1334,6 +1346,10 @@ export default function PresalesProposalsPage() {
 
                         <th className="px-4 py-3">
                           Approval
+                        </th>
+
+                        <th className="px-4 py-3">
+                          Rejection Reason
                         </th>
 
                         <th className="px-4 py-3">
@@ -1421,6 +1437,20 @@ export default function PresalesProposalsPage() {
                                     proposal.approval_status,
                                   )}
                                 </Badge>
+                              </td>
+
+                              <td className="max-w-80 px-4 py-4 text-sm">
+                                {proposal.approval_status ===
+                                  "REJECTED" &&
+                                proposal.rejection_reason ? (
+                                  <p className="whitespace-normal text-red-700">
+                                    {proposal.rejection_reason}
+                                  </p>
+                                ) : (
+                                  <span className="text-slate-400">
+                                    —
+                                  </span>
+                                )}
                               </td>
 
                               <td className="px-4 py-4">

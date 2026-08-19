@@ -678,7 +678,13 @@ class ProposalResponse(BaseModel):
     proposal_status: str
     approval_status: str
     remarks: str | None
+    rejection_reason: str | None
     created_at: datetime
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ProposalRejectionRequest(BaseModel):
+    approved_by: int = Field(gt=0)
+    rejection_reason: str = Field(min_length=1)

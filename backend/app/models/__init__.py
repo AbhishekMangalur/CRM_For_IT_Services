@@ -40,6 +40,7 @@ from app.models.executive import ExecutiveKPISnapshot
 from app.models.blended_rate import BlendedRate
 from app.models.financial import FinancialActual
 from app.models.presales_template import PresalesTemplate
+from app.models.rfp import BidEvaluation, RFP, RFPAssignment
 
 
 __all__ = [
@@ -69,4 +70,7 @@ __all__ = [
     "BlendedRate",
     "FinancialActual",
     "PresalesTemplate",
+    "RFP",
+    "BidEvaluation",
+    "RFPAssignment",
 ]

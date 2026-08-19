@@ -290,6 +290,8 @@ export interface Proposal {
 
   remarks: string;
 
+  rejection_reason: string | null;
+
   created_at: string;
 
   updated_at: string;

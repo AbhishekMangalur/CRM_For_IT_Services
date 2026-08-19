@@ -7,6 +7,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.orm import (
     DeclarativeBase,
     Session,
@@ -20,26 +21,25 @@ class Base(DeclarativeBase):
     pass
 
 
-engine = create_engine(
-    settings.database_url,
+database_url = make_url(settings.database_url)
+engine_options: dict[str, object] = {"pool_pre_ping": True}
 
-    pool_pre_ping=True,
+if database_url.get_backend_name() == "postgresql":
+    engine_options.update(
+        pool_size=3,
+        max_overflow=2,
+        pool_timeout=30,
+        pool_recycle=180,
+        connect_args={
+            "connect_timeout": 10,
+            "keepalives": 1,
+            "keepalives_idle": 30,
+            "keepalives_interval": 10,
+            "keepalives_count": 5,
+        },
+    )
 
-    pool_size=3,
-    max_overflow=2,
-
-    pool_timeout=30,
-
-    pool_recycle=180,
-
-    connect_args={
-        "connect_timeout": 10,
-        "keepalives": 1,
-        "keepalives_idle": 30,
-        "keepalives_interval": 10,
-        "keepalives_count": 5,
-    },
-)
+engine = create_engine(settings.database_url, **engine_options)
 
 
 SessionLocal = sessionmaker(
