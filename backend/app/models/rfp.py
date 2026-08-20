@@ -44,6 +44,15 @@ class RFP(Base):
         index=True,
     )
 
+    opportunity_id: Mapped[int | None] = mapped_column(
+        ForeignKey(
+            "opportunities.id",
+            ondelete="SET NULL",
+        ),
+        nullable=True,
+        index=True,
+    )
+
     client_name: Mapped[str] = mapped_column(
         String(150),
         nullable=False,

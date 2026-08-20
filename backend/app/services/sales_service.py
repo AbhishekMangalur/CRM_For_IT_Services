@@ -273,18 +273,9 @@ def synchronize_bookings_for_opportunity_outcome(
             )
 
     if is_won:
-        opportunity_name = data.get(
-            "opportunity_name",
-            opportunity.opportunity_name,
-        )
-        client_name = data.get(
-            "client_name",
-            opportunity.client_name,
-        )
         linked_rfps = db.scalars(
             select(RFP).where(
-                RFP.title == opportunity_name,
-                RFP.client_name == client_name,
+                RFP.opportunity_id == opportunity.id,
             )
         ).all()
 

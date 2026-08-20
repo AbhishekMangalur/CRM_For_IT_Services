@@ -20,6 +20,7 @@ export type BidDecision =
 
 export interface Rfp {
   id: number;
+  opportunity_id: number | null;
 
   rfp_number: string;
   title: string;
@@ -49,6 +50,7 @@ export interface Rfp {
 }
 
 export interface CreateRfpRequest {
+  opportunity_id: number;
   rfp_number: string;
   title: string;
 

@@ -191,6 +191,23 @@ def synchronize_estimation_commercial_values(
     return opportunity, lead
 
 
+def synchronize_solution_approval_status(
+    db: Session,
+    estimation: Estimation,
+) -> Solution:
+    """Keep the linked solution aligned with its estimation status."""
+    solution = db.get(Solution, estimation.solution_id)
+
+    if not solution:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="The estimation is not linked to an existing solution",
+        )
+
+    solution.solution_status = estimation.approval_status
+    return solution
+
+
 def validate_solution_relations(
     db: Session,
     data: dict[str, Any],
@@ -215,14 +232,32 @@ def create_solution(
 ) -> Solution:
     validate_solution_relations(db, data)
 
+    opportunity = require_opportunity(
+        db,
+        data["opportunity_id"],
+    )
+
     try:
-        return create_record(
-            db,
-            Solution,
-            data,
-        )
+        solution = Solution(**data)
+        db.add(solution)
+
+        opportunity.pipeline_stage = "SOLUTION_DESIGN"
+        opportunity.win_probability = 40
+
+        db.commit()
+        db.refresh(solution)
+        return solution
     except IntegrityError as error:
         handle_integrity_error(db, error)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Solution creation failed; the linked opportunity "
+                "was not moved to solution design"
+            ),
+        ) from error
 
 
 def get_solutions(
@@ -499,6 +534,11 @@ def create_estimation(
         db.add(estimation)
         db.flush()
 
+        synchronize_solution_approval_status(
+            db,
+            estimation,
+        )
+
         if estimation.approval_status == "APPROVED":
             synchronize_estimation_commercial_values(
                 db,
@@ -574,6 +614,11 @@ def update_estimation(
     try:
         for field_name, value in calculated_data.items():
             setattr(estimation, field_name, value)
+
+        synchronize_solution_approval_status(
+            db,
+            estimation,
+        )
 
         if estimation.approval_status == "APPROVED":
             synchronize_estimation_commercial_values(
@@ -661,6 +706,11 @@ def approve_estimation(
             estimation.approved_at or datetime.now(timezone.utc)
         )
         estimation.rejection_reason = None
+
+        synchronize_solution_approval_status(
+            db,
+            estimation,
+        )
 
         opportunity, lead = synchronize_estimation_commercial_values(
             db,
@@ -760,20 +810,16 @@ def reject_estimation(
             detail="Rejection reason is required",
         )
 
-    solution = db.get(Solution, estimation.solution_id)
-
-    if not solution:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="The estimation is not linked to an existing solution",
-        )
-
     try:
         estimation.approval_status = "REJECTED"
         estimation.approved_by = approver.id
         estimation.approved_at = datetime.now(timezone.utc)
         estimation.rejection_reason = rejection_reason.strip()
-        solution.solution_status = "REJECTED"
+
+        synchronize_solution_approval_status(
+            db,
+            estimation,
+        )
 
         db.flush()
         db.commit()
@@ -1053,6 +1099,29 @@ def validate_proposal_relations(
 
     require_solution(db, solution_id)
 
+    estimation = get_estimation_by_solution_id(
+        db,
+        solution_id,
+    )
+
+    if not estimation:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "An approved estimation is required before "
+                "a proposal can be created"
+            ),
+        )
+
+    if estimation.approval_status != "APPROVED":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                "The linked estimation must be approved before "
+                "a proposal can be created"
+            ),
+        )
+
     proposal_status = data.get(
         "proposal_status",
         existing_proposal.proposal_status
@@ -1133,6 +1202,15 @@ def create_proposal(
         data,
     )
 
+    solution = require_solution(
+        db,
+        data["solution_id"],
+    )
+    opportunity = require_opportunity(
+        db,
+        solution.opportunity_id,
+    )
+
     try:
         proposal = Proposal(
             **data,
@@ -1149,11 +1227,24 @@ def create_proposal(
         proposal.proposal_document_url = (
             f"/api/presale/proposals/{proposal.id}/proposal-document"
         )
+
+        opportunity.pipeline_stage = "PROPOSAL"
+        opportunity.win_probability = 60
+
         db.commit()
         db.refresh(proposal)
         return proposal
     except IntegrityError as error:
         handle_integrity_error(db, error)
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Proposal creation failed; the linked opportunity "
+                "was not moved to proposal stage"
+            ),
+        ) from error
 
 
 def get_proposals(
@@ -1255,14 +1346,35 @@ def approve_proposal(
         proposal_id,
     )
 
-    proposal.approval_status = "APPROVED"
-    proposal.proposal_status = "ACCEPTED"
-    proposal.rejection_reason = None
+    solution = require_solution(
+        db,
+        proposal.solution_id,
+    )
+    opportunity = require_opportunity(
+        db,
+        solution.opportunity_id,
+    )
 
-    db.commit()
-    db.refresh(proposal)
+    try:
+        proposal.approval_status = "APPROVED"
+        proposal.proposal_status = "ACCEPTED"
+        proposal.rejection_reason = None
 
-    return proposal
+        opportunity.pipeline_stage = "NEGOTIATION"
+        opportunity.win_probability = 80
+
+        db.commit()
+        db.refresh(proposal)
+        return proposal
+    except SQLAlchemyError as error:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=(
+                "Proposal approval failed; the linked opportunity "
+                "was not moved to negotiation"
+            ),
+        ) from error
 
 
 def reject_proposal(

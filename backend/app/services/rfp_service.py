@@ -10,6 +10,7 @@ from app.models.rfp import (
     RFP,
     RFPAssignment,
 )
+from app.models.sale import Opportunity
 from app.models.user import User
 from app.repositories.rfp_repository import (
     create_record,
@@ -158,6 +159,23 @@ def validate_rfp(
     data: dict[str, Any],
     existing_rfp: RFP | None = None,
 ) -> None:
+    opportunity_id = data.get(
+        "opportunity_id",
+        existing_rfp.opportunity_id if existing_rfp else None,
+    )
+
+    if opportunity_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="opportunity_id is required",
+        )
+
+    if db.get(Opportunity, opportunity_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Opportunity with ID {opportunity_id} was not found",
+        )
+
     owner_id = data.get(
         "owner_id",
         existing_rfp.owner_id

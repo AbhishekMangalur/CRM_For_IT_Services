@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class RFPCreate(BaseModel):
+    opportunity_id: int = Field(gt=0)
+
     rfp_number: str = Field(
         min_length=2,
         max_length=100,
@@ -82,6 +84,8 @@ class RFPCreate(BaseModel):
 
 
 class RFPPut(BaseModel):
+    opportunity_id: int = Field(gt=0)
+
     rfp_number: str = Field(
         min_length=2,
         max_length=100,
@@ -152,6 +156,11 @@ class RFPPut(BaseModel):
 
 
 class RFPPatch(BaseModel):
+    opportunity_id: int | None = Field(
+        default=None,
+        gt=0,
+    )
+
     rfp_number: str | None = Field(
         default=None,
         min_length=2,
@@ -221,6 +230,7 @@ class RFPPatch(BaseModel):
 
 class RFPResponse(BaseModel):
     id: int
+    opportunity_id: int | None
     rfp_number: str
     title: str
     client_name: str

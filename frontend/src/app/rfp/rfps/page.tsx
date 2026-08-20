@@ -459,8 +459,12 @@ function rfpToForm(
 
 function formToPayload(
   form: RfpFormState,
+  opportunityId: string,
 ): CreateRfpRequest {
   return {
+    opportunity_id:
+      Number(opportunityId),
+
     rfp_number:
       form.rfp_number.trim(),
 
@@ -548,13 +552,7 @@ function RfpFormModal({
     );
   const [selectedOpportunityId, setSelectedOpportunityId] = useState(() => {
     if (!rfp) return "";
-    return (
-      opportunities.find(
-        (opportunity) =>
-          opportunity.opportunity_name === rfp.title &&
-          opportunity.client_name === rfp.client_name,
-      )?.id.toString() ?? ""
-    );
+    return rfp.opportunity_id?.toString() ?? "";
   });
 
   function handleOpportunityChange(
@@ -579,6 +577,48 @@ function RfpFormModal({
       owner_id: opportunity.sales_owner_id.toString(),
     }));
   }
+
+  function handleClientChange(
+    clientName: string,
+  ): void {
+    if (!clientName) {
+      setSelectedOpportunityId("");
+      setForm((previous) => ({
+        ...previous,
+        client_name: "",
+      }));
+      return;
+    }
+
+    const currentOpportunity = opportunities.find(
+      (opportunity) =>
+        opportunity.id === Number(selectedOpportunityId) &&
+        opportunity.client_name === clientName,
+    );
+    const clientOpportunity =
+      currentOpportunity ??
+      opportunities.find(
+        (opportunity) => opportunity.client_name === clientName,
+      );
+
+    if (clientOpportunity) {
+      handleOpportunityChange(clientOpportunity.id.toString());
+    }
+  }
+
+  const clientOptions = Array.from(
+    new Map(
+      opportunities.map((opportunity) => [
+        opportunity.client_name,
+        {
+          value: opportunity.client_name,
+          label: opportunity.client_name,
+          description: `${opportunity.industry ?? "Industry not specified"} · ${opportunity.service_type}`,
+          searchText: `${opportunity.client_name} ${opportunity.industry ?? ""} ${opportunity.service_type}`,
+        },
+      ]),
+    ).values(),
+  );
 
   function handleChange(
     event:
@@ -634,7 +674,7 @@ function RfpFormModal({
     }
 
     await onSubmit(
-      formToPayload(form),
+      formToPayload(form, selectedOpportunityId),
     );
   }
 
@@ -734,18 +774,18 @@ function RfpFormModal({
                 }))}
               />
 
-            {/* TITLE */}
+            {/* OPPORTUNITY */}
 
             <div className="md:col-span-2">
               <SearchSelect
                 id="opportunity_id"
-                label="RFP Title / Sales Opportunity"
+                label="Sales Opportunity"
                 placeholder="Search by opportunity, client, or service..."
                 value={selectedOpportunityId}
                 onChange={handleOpportunityChange}
                 options={opportunities.map((opportunity) => ({
                   value: opportunity.id.toString(),
-                  label: opportunity.opportunity_name,
+                  label: `${opportunity.opportunity_name} — ${opportunity.client_name}`,
                   description: `${opportunity.client_name} · ${opportunity.service_type}`,
                   searchText: `${opportunity.opportunity_name} ${opportunity.client_name} ${opportunity.service_type}`,
                 }))}
@@ -756,24 +796,32 @@ function RfpFormModal({
               </p>
             </div>
 
-            {/* CLIENT */}
+            {/* TITLE */}
 
-            <div className="space-y-2">
-              <Label htmlFor="client_name">
-                Client Name *
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="title">
+                RFP Title *
               </Label>
-
               <Input
-                id="client_name"
-                name="client_name"
-                value={
-                  form.client_name
-                }
+                id="title"
+                name="title"
+                value={form.title}
                 onChange={handleChange}
-                placeholder="ABC Technologies"
+                placeholder="Enter any RFP title"
                 required
               />
             </div>
+
+            {/* CLIENT */}
+
+            <SearchSelect
+              id="client_name"
+              label="Client Name"
+              placeholder="Search by client, industry, or service..."
+              value={form.client_name}
+              onChange={handleClientChange}
+              options={clientOptions}
+            />
 
             {/* INDUSTRY */}
 
@@ -1627,7 +1675,7 @@ export default function RfpsPage() {
         formToPayload({
           ...rfpToForm(rfp),
           rfp_status: "SUBMITTED",
-        }),
+        }, rfp.opportunity_id?.toString() ?? ""),
       );
 
       setRfps((current) =>

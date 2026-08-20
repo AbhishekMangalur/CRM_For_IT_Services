@@ -211,7 +211,7 @@ export function PendingProposalApprovals() {
       );
 
       setSuccessMessage(
-        `Proposal #${proposal.id} approved successfully.`,
+        `Proposal "${proposal.proposal_title}" approved successfully.`,
       );
 
       await loadPendingProposals();
@@ -274,7 +274,7 @@ export function PendingProposalApprovals() {
       );
 
       setSuccessMessage(
-        `Proposal #${rejectingProposal.id} rejected.`,
+        `Proposal "${rejectingProposal.proposal_title}" rejected.`,
       );
 
       setRejectingProposal(
