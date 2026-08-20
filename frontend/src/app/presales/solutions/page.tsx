@@ -91,6 +91,110 @@ async function getPresalesOwners(): Promise<PresalesOwnerUser[]> {
   );
 }
 
+interface OpportunityComboboxProps {
+  opportunities: SalesOpportunity[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function OpportunityCombobox({
+  opportunities,
+  value,
+  onChange,
+}: OpportunityComboboxProps) {
+  const selectedOpportunity = opportunities.find(
+    (opportunity) => opportunity.id.toString() === value,
+  );
+  const [query, setQuery] = useState(
+    selectedOpportunity
+      ? `${selectedOpportunity.opportunity_name} (${selectedOpportunity.client_name})`
+      : "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOpportunities = opportunities.filter(
+    (opportunity) =>
+      !normalizedQuery ||
+      opportunity.opportunity_name.toLowerCase().includes(normalizedQuery) ||
+      opportunity.client_name.toLowerCase().includes(normalizedQuery) ||
+      opportunity.service_type.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="opportunity_search">
+        Sales Opportunity *
+      </Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id="opportunity_search"
+          type="search"
+          autoComplete="off"
+          value={query}
+          required
+          placeholder="Search by opportunity, client, or service..."
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls="opportunity_search-options"
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id="opportunity_search-options"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredOpportunities.length > 0 ? (
+              filteredOpportunities.map((opportunity) => (
+                <button
+                  key={opportunity.id}
+                  type="button"
+                  role="option"
+                  aria-selected={value === opportunity.id.toString()}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(
+                      `${opportunity.opportunity_name} (${opportunity.client_name})`,
+                    );
+                    onChange(opportunity.id.toString());
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {opportunity.opportunity_name}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {opportunity.client_name} · {opportunity.service_type}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No opportunities match your search.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <p className="text-xs text-slate-500">
+        Opportunities are loaded directly from the Sales API.
+      </p>
+    </div>
+  );
+}
+
 interface SolutionFormState {
   opportunity_id: string;
   solution_name: string;
@@ -389,44 +493,16 @@ function SolutionFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="opportunity_id">
-                Sales Opportunity *
-              </Label>
-
-              <select
-                id="opportunity_id"
-                name="opportunity_id"
-                value={form.opportunity_id}
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-                required
-              >
-                <option value="">
-                  Select an opportunity
-                </option>
-
-                {opportunities.map(
-                  (opportunity) => (
-                    <option
-                      key={opportunity.id}
-                      value={opportunity.id}
-                    >
-                      #{opportunity.id} -{" "}
-                      {
-                        opportunity.opportunity_name
-                      }{" "}
-                      ({opportunity.client_name})
-                    </option>
-                  ),
-                )}
-              </select>
-
-              <p className="text-xs text-slate-500">
-                Opportunities are loaded directly
-                from the Sales API.
-              </p>
-            </div>
+            <OpportunityCombobox
+              opportunities={opportunities}
+              value={form.opportunity_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  opportunity_id: value,
+                }))
+              }
+            />
 
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="solution_name">

@@ -544,7 +544,6 @@ function AllocationFormModal({
                       key={request.id}
                       value={request.id}
                     >
-                      #{request.id} -{" "}
                       {request.requested_role} -{" "}
                       {request.required_skill}
                     </option>
@@ -578,7 +577,6 @@ function AllocationFormModal({
                       key={opportunity.id}
                       value={opportunity.id}
                     >
-                      #{opportunity.id} -{" "}
                       {
                         opportunity.opportunity_name
                       }
@@ -612,7 +610,6 @@ function AllocationFormModal({
                       key={solution.id}
                       value={solution.id}
                     >
-                      #{solution.id} -{" "}
                       {solution.solution_name}
                     </option>
                   ),

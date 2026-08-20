@@ -1,10 +1,15 @@
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.presale import Solution
+from app.models.rfp import RFP
+from app.models.resource_manager import ResourceAllocation, ResourceRequest
 from app.models.sale import Lead, Opportunity, SalesActivity
 from app.models.user import User
 from app.repositories.sales_repository import (
@@ -14,6 +19,7 @@ from app.repositories.sales_repository import (
     get_record_by_id,
     update_record,
 )
+from app.services.resource_manager_service import update_employee_utilization
 
 
 def require_user(
@@ -218,6 +224,83 @@ def convert_lead_for_closed_won_opportunity(
     lead.lead_status = "CONVERTED"
 
 
+def synchronize_bookings_for_opportunity_outcome(
+    db: Session,
+    opportunity: Opportunity,
+    data: dict[str, Any],
+) -> None:
+    next_status = data.get("status", opportunity.status).upper()
+    next_pipeline_stage = data.get(
+        "pipeline_stage",
+        opportunity.pipeline_stage,
+    ).upper()
+
+    is_won = next_status == "WON" and next_pipeline_stage == "CLOSED_WON"
+    is_lost = next_status == "LOST" or next_pipeline_stage == "CLOSED_LOST"
+
+    if not is_won and not is_lost:
+        return
+
+    linked_soft_bookings = db.scalars(
+        select(ResourceAllocation).where(
+            ResourceAllocation.allocation_type == "SOFT_BOOKING",
+            ResourceAllocation.allocation_status.in_({"PENDING", "CONFIRMED"}),
+            or_(
+                ResourceAllocation.opportunity_id == opportunity.id,
+                ResourceAllocation.solution_id.in_(
+                    select(Solution.id).where(
+                        Solution.opportunity_id == opportunity.id,
+                    )
+                ),
+                ResourceAllocation.resource_request_id.in_(
+                    select(ResourceRequest.id).where(
+                        ResourceRequest.opportunity_id == opportunity.id,
+                    )
+                ),
+            ),
+        )
+    ).all()
+
+    for allocation in linked_soft_bookings:
+        if is_won:
+            allocation.allocation_type = "HARD_BOOKING"
+            allocation.allocation_status = "CONFIRMED"
+        else:
+            allocation.allocation_status = "CANCELLED"
+            update_employee_utilization(
+                allocation.employee,
+                -allocation.allocation_percentage,
+            )
+
+    if is_won:
+        opportunity_name = data.get(
+            "opportunity_name",
+            opportunity.opportunity_name,
+        )
+        client_name = data.get(
+            "client_name",
+            opportunity.client_name,
+        )
+        linked_rfps = db.scalars(
+            select(RFP).where(
+                RFP.title == opportunity_name,
+                RFP.client_name == client_name,
+            )
+        ).all()
+
+        for rfp in linked_rfps:
+            rfp.rfp_status = "WON"
+            if rfp.completed_at is None:
+                rfp.completed_at = datetime.now(timezone.utc)
+
+            for assignment in rfp.assignments:
+                if assignment.assignment_status not in {
+                    "COMPLETED",
+                    "CANCELLED",
+                }:
+                    assignment.assignment_status = "COMPLETED"
+
+
 def create_opportunity(
     db: Session,
     data: dict[str, Any],
@@ -266,6 +349,12 @@ def update_opportunity(
     validate_opportunity_relations(db, data)
 
     convert_lead_for_closed_won_opportunity(
+        db,
+        opportunity,
+        data,
+    )
+
+    synchronize_bookings_for_opportunity_outcome(
         db,
         opportunity,
         data,

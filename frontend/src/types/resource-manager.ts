@@ -11,6 +11,7 @@ export type EmploymentType =
 export type EmployeeAvailabilityStatus =
   | "AVAILABLE"
   | "PARTIALLY_AVAILABLE"
+  | "SOFT_BOOKED"
   | "ALLOCATED"
   | "UNAVAILABLE"
   | string;

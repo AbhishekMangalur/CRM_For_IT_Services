@@ -82,6 +82,113 @@ async function getRegistrationUsers(): Promise<RegistrationUser[]> {
   return response.data;
 }
 
+interface SearchSelectOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface SearchSelectProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  options: SearchSelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchSelect({
+  id,
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+}: SearchSelectProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState(
+    selectedOption?.label ?? "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>
+        {label} *
+      </Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          value={query}
+          required
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No matching records found.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* FORM */
 /* ================================================= */
 
@@ -114,7 +221,7 @@ const EMPTY_FORM: DealRegistrationFormState = {
   registered_on: "",
   expiry_date: "",
 
-  expected_incentive: "0",
+  expected_incentive: "",
   currency: "USD",
 
   notes: "",
@@ -463,88 +570,54 @@ function DealRegistrationFormModal({
               </Alert>
             )}
 
-            {/* Partner */}
+            <SearchSelect
+              id="partner_search"
+              label="Partner"
+              placeholder="Search by partner, type, program, or tier..."
+              options={partners
+                .filter((partner) => partner.is_active)
+                .map((partner) => ({
+                  value: partner.id.toString(),
+                  label: partner.name,
+                  description: `${formatLabel(partner.partner_type)} · ${formatLabel(partner.partner_tier)}`,
+                  searchText: [
+                    partner.name,
+                    partner.partner_type,
+                    partner.partner_program,
+                    partner.partner_tier,
+                  ].join(" "),
+                }))}
+              value={form.partner_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  partner_id: value,
+                }))
+              }
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="partner_id">
-                Partner *
-              </Label>
-
-              <select
-                id="partner_id"
-                name="partner_id"
-                value={form.partner_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select partner
-                </option>
-
-                {partners
-                  .filter(
-                    (partner) =>
-                      partner.is_active,
-                  )
-                  .map((partner) => (
-                    <option
-                      key={partner.id}
-                      value={partner.id}
-                    >
-                      {partner.name} -{" "}
-                      {formatLabel(
-                        partner.partner_tier,
-                      )}
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            {/* Opportunity */}
-
-            <div className="space-y-2">
-              <Label htmlFor="opportunity_id">
-                Sales Opportunity *
-              </Label>
-
-              <select
-                id="opportunity_id"
-                name="opportunity_id"
-                value={
-                  form.opportunity_id
-                }
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select opportunity
-                </option>
-
-                {opportunities.map(
-                  (opportunity) => (
-                    <option
-                      key={
-                        opportunity.id
-                      }
-                      value={
-                        opportunity.id
-                      }
-                    >
-                      #
-                      {
-                        opportunity.id
-                      }{" "}
-                      -{" "}
-                      {
-                        opportunity.opportunity_name
-                      }
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+            <SearchSelect
+              id="deal_opportunity_search"
+              label="Sales Opportunity"
+              placeholder="Search by opportunity, client, or service..."
+              options={opportunities.map((opportunity) => ({
+                value: opportunity.id.toString(),
+                label: opportunity.opportunity_name,
+                description: `${opportunity.client_name} · ${opportunity.service_type}`,
+                searchText: [
+                  opportunity.opportunity_name,
+                  opportunity.client_name,
+                  opportunity.service_type,
+                ].join(" "),
+              }))}
+              value={form.opportunity_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  opportunity_id: value,
+                }))
+              }
+            />
 
             {/* Reference */}
 
@@ -653,7 +726,7 @@ function DealRegistrationFormModal({
                     form.expected_incentive
                   }
                   onChange={handleChange}
-                  placeholder="1000"
+                  placeholder="Enter expected incentive"
                 />
               </div>
 

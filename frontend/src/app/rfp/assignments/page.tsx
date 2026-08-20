@@ -88,6 +88,109 @@ async function getUsers(): Promise<AssignmentUser[]> {
   return response.data;
 }
 
+interface SearchSelectOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface SearchSelectProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  options: SearchSelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchSelect({
+  id,
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+}: SearchSelectProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState(selectedOption?.label ?? "");
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label} *</Label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          required
+          value={query}
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredOptions.length ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  {option.description && (
+                    <span className="block text-xs text-slate-500">
+                      {option.description}
+                    </span>
+                  )}
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No matching records found.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ================================================= */
 /* FORM */
 /* ================================================= */
@@ -447,42 +550,31 @@ function AssignmentFormModal({
 
             {/* RFP */}
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="rfp_id">
-                BID Approved RFP *
-              </Label>
-
-              <select
+            <div className="md:col-span-2">
+              <SearchSelect
                 id="rfp_id"
-                name="rfp_id"
+                label="BID Approved RFP"
+                placeholder="Search by RFP number, title, client, or service..."
                 value={form.rfp_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select RFP
-                </option>
-
-                {rfps
+                onChange={(value) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    rfp_id: value,
+                  }))
+                }
+                options={rfps
                   .filter(
                     (rfp) =>
                       rfp.bid_decision ===
                       "BID",
                   )
-                  .map((rfp) => (
-                    <option
-                      key={rfp.id}
-                      value={rfp.id}
-                    >
-                      {rfp.rfp_number} -{" "}
-                      {rfp.title} - Due{" "}
-                      {formatDate(
-                        rfp.submission_deadline,
-                      )}
-                    </option>
-                  ))}
-              </select>
+                  .map((rfp) => ({
+                    value: rfp.id.toString(),
+                    label: `${rfp.rfp_number} · ${rfp.title}`,
+                    description: `${rfp.client_name} · ${rfp.service_type} · Due ${formatDate(rfp.submission_deadline)}`,
+                    searchText: `${rfp.rfp_number} ${rfp.title} ${rfp.client_name} ${rfp.service_type}`,
+                  }))}
+              />
 
               <p className="text-xs text-slate-500">
                 Only RFPs with
@@ -493,78 +585,56 @@ function AssignmentFormModal({
 
             {/* USER */}
 
-            <div className="space-y-2">
-              <Label htmlFor="user_id">
-                Team Member *
-              </Label>
-
-              <select
+            <SearchSelect
                 id="user_id"
-                name="user_id"
+                label="Team Member"
+                placeholder="Search by team member name, email, or role..."
                 value={form.user_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select user
-                </option>
-
-                {users.map(
-                  (user) => (
-                    <option
-                      key={user.id}
-                      value={user.id}
-                    >
-                      {user.full_name} -{" "}
-                      {user.role.display_name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+                onChange={(value) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    user_id: value,
+                  }))
+                }
+                options={users
+                  .filter((user) => user.is_active !== false)
+                  .map((user) => ({
+                    value: user.id.toString(),
+                    label: user.full_name,
+                    description: `${user.role.display_name} · ${user.email}`,
+                    searchText: `${user.full_name} ${user.email} ${user.role.name} ${user.role.display_name}`,
+                  }))}
+              />
 
             {/* ROLE */}
 
-            <div className="space-y-2">
-              <Label htmlFor="assignment_role">
-                Assignment Role
-              </Label>
-
-              <select
+            <SearchSelect
                 id="assignment_role"
-                name="assignment_role"
+                label="Assignment Role"
+                placeholder="Search assignment role..."
                 value={
                   form.assignment_role
                 }
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="BID_OWNER">
-                  Bid Owner
-                </option>
-
-                <option value="SOLUTION_ARCHITECT">
-                  Solution Architect
-                </option>
-
-                <option value="TECHNICAL_WRITER">
-                  Technical Writer
-                </option>
-
-                <option value="COMMERCIAL_REVIEWER">
-                  Commercial Reviewer
-                </option>
-
-                <option value="RESOURCE_REVIEWER">
-                  Resource Reviewer
-                </option>
-
-                <option value="APPROVER">
-                  Approver
-                </option>
-              </select>
-            </div>
+                onChange={(value) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    assignment_role: value as RfpAssignmentRole,
+                  }))
+                }
+                options={[
+                  "BID_OWNER",
+                  "SOLUTION_ARCHITECT",
+                  "TECHNICAL_WRITER",
+                  "COMMERCIAL_REVIEWER",
+                  "RESOURCE_REVIEWER",
+                  "APPROVER",
+                ].map((role) => ({
+                  value: role,
+                  label: formatLabel(role),
+                  description: "",
+                  searchText: `${role} ${formatLabel(role)}`,
+                }))}
+              />
 
             {/* STATUS */}
 

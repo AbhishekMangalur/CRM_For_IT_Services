@@ -49,6 +49,7 @@ import {
   createEmployee,
   deleteEmployee,
   getEmployees,
+  getResourceAllocations,
   importEmployeesCsv,
   replaceEmployee,
 } from "@/lib/resource-manager-api";
@@ -190,6 +191,9 @@ function getAvailabilityClasses(
 
     case "PARTIALLY_AVAILABLE":
       return "bg-amber-100 text-amber-700";
+
+    case "SOFT_BOOKED":
+      return "bg-cyan-100 text-cyan-700";
 
     case "ALLOCATED":
       return "bg-indigo-100 text-indigo-700";
@@ -568,6 +572,10 @@ function EmployeeFormModal({
                   Partially Available
                 </option>
 
+                <option value="SOFT_BOOKED">
+                  Soft Booked
+                </option>
+
                 <option value="ALLOCATED">
                   Allocated
                 </option>
@@ -902,13 +910,52 @@ export default function ResourceManagerEmployeesPage() {
       setError("");
 
       try {
-        const records =
-          await getEmployees({
+        const [records, allocations] = await Promise.all([
+          getEmployees({
             skip: 0,
             limit: 100,
-          });
+          }),
+          getResourceAllocations({
+            skip: 0,
+            limit: 500,
+          }),
+        ]);
 
-        setEmployees(records);
+        const softBookedEmployeeIds = new Set(
+          allocations
+            .filter(
+              (allocation) =>
+                allocation.allocation_type === "SOFT_BOOKING" &&
+                ["PENDING", "CONFIRMED"].includes(
+                  allocation.allocation_status,
+                ),
+            )
+            .map((allocation) => allocation.employee_id),
+        );
+
+        const hardBookedEmployeeIds = new Set(
+          allocations
+            .filter(
+              (allocation) =>
+                allocation.allocation_type === "HARD_BOOKING" &&
+                ["PENDING", "CONFIRMED"].includes(
+                  allocation.allocation_status,
+                ),
+            )
+            .map((allocation) => allocation.employee_id),
+        );
+
+        setEmployees(
+          records.map((employee) =>
+            softBookedEmployeeIds.has(employee.id) &&
+            !hardBookedEmployeeIds.has(employee.id)
+              ? {
+                  ...employee,
+                  availability_status: "SOFT_BOOKED",
+                }
+              : employee,
+          ),
+        );
       } catch (requestError) {
         setError(
           getErrorMessage(requestError),
@@ -1316,6 +1363,10 @@ export default function ResourceManagerEmployeesPage() {
 
                   <option value="PARTIALLY_AVAILABLE">
                     Partially Available
+                  </option>
+
+                  <option value="SOFT_BOOKED">
+                    Soft Booked
                   </option>
 
                   <option value="ALLOCATED">

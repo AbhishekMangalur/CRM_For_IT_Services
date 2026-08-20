@@ -1027,11 +1027,15 @@ def validate_resource_allocation_relations(
             ),
         )
 
+    available_utilization = employee.current_utilization_percentage
+
     if (
-        employee.current_utilization_percentage
-        + allocation_percentage
-        > 100
+        existing_allocation is not None
+        and existing_allocation.employee_id == employee.id
     ):
+        available_utilization -= existing_allocation.allocation_percentage
+
+    if available_utilization + allocation_percentage > 100:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(

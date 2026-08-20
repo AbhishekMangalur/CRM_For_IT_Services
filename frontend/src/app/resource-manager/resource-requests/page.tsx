@@ -184,6 +184,24 @@ function formatDate(
   ).format(date);
 }
 
+function formatRequestNotes(
+  notes: string | null,
+): string {
+  if (!notes) {
+    return "No notes added.";
+  }
+
+  if (
+    /^Automatically generated from Presales Resource Requirement #\d+$/i.test(
+      notes.trim(),
+    )
+  ) {
+    return "Automatically generated from the linked Presales Resource Requirement.";
+  }
+
+  return notes;
+}
+
 function getErrorMessage(
   error: unknown,
 ): string {
@@ -952,8 +970,7 @@ function ResourceRequestDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Resource Request #
-              {request.id}
+              Resource Request
             </p>
           </div>
 
@@ -1121,8 +1138,9 @@ function ResourceRequestDetailsModal({
             </p>
 
             <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">
-              {request.notes ||
-                "No notes added."}
+              {formatRequestNotes(
+                request.notes,
+              )}
             </p>
           </div>
 

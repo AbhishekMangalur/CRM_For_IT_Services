@@ -22,6 +22,7 @@ import {
   Plus,
   RefreshCcw,
   Search,
+  Send,
   Trash2,
   UserRound,
   X,
@@ -60,6 +61,109 @@ import type {
   Rfp,
   RfpStatus,
 } from "@/types/rfp";
+
+interface SearchSelectOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface SearchSelectProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  options: SearchSelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchSelect({
+  id,
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+}: SearchSelectProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label} *</Label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          required
+          value={isOpen ? query : selectedOption?.label ?? query}
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => {
+            setQuery("");
+            setIsOpen(true);
+          }}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+          }}
+        />
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredOptions.length ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No matching records found.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 /* ================================================= */
 /* USER */
@@ -454,9 +558,8 @@ function RfpFormModal({
   });
 
   function handleOpportunityChange(
-    event: ChangeEvent<HTMLSelectElement>,
+    opportunityId: string,
   ): void {
-    const opportunityId = event.target.value;
     setSelectedOpportunityId(opportunityId);
     const opportunity = opportunities.find(
       (record) => record.id === Number(opportunityId),
@@ -612,58 +715,41 @@ function RfpFormModal({
 
             {/* OWNER */}
 
-            <div className="space-y-2">
-              <Label htmlFor="owner_id">
-                RFP Owner *
-              </Label>
-
-              <select
+            <SearchSelect
                 id="owner_id"
-                name="owner_id"
+                label="RFP Owner"
+                placeholder="Search by owner name, email, or role..."
                 value={form.owner_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select owner
-                </option>
-
-                {owners.map(
-                  (owner) => (
-                    <option
-                      key={owner.id}
-                      value={owner.id}
-                    >
-                      {owner.full_name} -{" "}
-                      {owner.role.display_name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+                onChange={(value) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    owner_id: value,
+                  }))
+                }
+                options={owners.map((owner) => ({
+                  value: owner.id.toString(),
+                  label: owner.full_name,
+                  description: `${owner.role.display_name} · ${owner.email}`,
+                  searchText: `${owner.full_name} ${owner.email} ${owner.role.name} ${owner.role.display_name}`,
+                }))}
+              />
 
             {/* TITLE */}
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="opportunity_id">
-                RFP Title / Sales Opportunity *
-              </Label>
-
-              <select
+            <div className="md:col-span-2">
+              <SearchSelect
                 id="opportunity_id"
+                label="RFP Title / Sales Opportunity"
+                placeholder="Search by opportunity, client, or service..."
                 value={selectedOpportunityId}
                 onChange={handleOpportunityChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">Select opportunity</option>
-                {opportunities.map((opportunity) => (
-                  <option key={opportunity.id} value={opportunity.id}>
-                    {opportunity.opportunity_name} · {opportunity.client_name}
-                  </option>
-                ))}
-              </select>
+                options={opportunities.map((opportunity) => ({
+                  value: opportunity.id.toString(),
+                  label: opportunity.opportunity_name,
+                  description: `${opportunity.client_name} · ${opportunity.service_type}`,
+                  searchText: `${opportunity.opportunity_name} ${opportunity.client_name} ${opportunity.service_type}`,
+                }))}
+              />
               <p className="text-xs text-slate-500">
                 Selecting an opportunity fills the client, industry, service,
                 value, currency, description, and owner fields.
@@ -1230,6 +1316,9 @@ export default function RfpsPage() {
   const [isSaving, setIsSaving] =
     useState(false);
 
+  const [submittingRfpId, setSubmittingRfpId] =
+    useState<number | null>(null);
+
   const [error, setError] =
     useState("");
 
@@ -1519,6 +1608,37 @@ export default function RfpsPage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleSubmitRfp(rfp: Rfp): Promise<void> {
+    const confirmed = await confirm(
+      `Submit RFP "${rfp.rfp_number} - ${rfp.title}" to the client?`,
+    );
+
+    if (!confirmed) return;
+
+    setSubmittingRfpId(rfp.id);
+    setError("");
+
+    try {
+      const updated = await replaceRfp(
+        rfp.id,
+        formToPayload({
+          ...rfpToForm(rfp),
+          rfp_status: "SUBMITTED",
+        }),
+      );
+
+      setRfps((current) =>
+        current.map((record) =>
+          record.id === updated.id ? updated : record,
+        ),
+      );
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setSubmittingRfpId(null);
     }
   }
 
@@ -2061,6 +2181,28 @@ export default function RfpsPage() {
 
                               <td className="px-4 py-4">
                                 <div className="flex justify-end gap-2">
+                                  {rfp.bid_decision === "BID" &&
+                                    ["EVALUATED", "IN_PROGRESS"].includes(
+                                      rfp.rfp_status,
+                                    ) && (
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        title="Submit RFP to client"
+                                        aria-label="Submit RFP to client"
+                                        disabled={submittingRfpId === rfp.id}
+                                        onClick={() =>
+                                          void handleSubmitRfp(rfp)
+                                        }
+                                      >
+                                        {submittingRfpId === rfp.id ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Send className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    )}
+
                                   <Button
                                     type="button"
                                     size="icon"

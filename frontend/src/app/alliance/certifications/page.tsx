@@ -68,6 +68,107 @@ import {
   ProtectedRoute,
 } from "@/components/auth/ProtectedRoute";
 
+interface SearchSelectOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface SearchSelectProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  options: SearchSelectOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchSelect({
+  id,
+  label,
+  placeholder,
+  options,
+  value,
+  onChange,
+}: SearchSelectProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState(selectedOption?.label ?? "");
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label} *</Label>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          value={query}
+          required
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredOptions.length ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No matching records found.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ================================================= */
 /* FORM */
 /* ================================================= */
@@ -481,78 +582,55 @@ function CertificationFormModal({
 
             {/* PARTNER */}
 
-            <div className="space-y-2">
-              <Label htmlFor="partner_id">
-                Partner *
-              </Label>
-
-              <select
+            <SearchSelect
                 id="partner_id"
-                name="partner_id"
+                label="Partner"
+                placeholder="Search by partner, type, program, or tier..."
                 value={form.partner_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select partner
-                </option>
-
-                {partners
+                onChange={(value) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    partner_id: value,
+                  }))
+                }
+                options={partners
                   .filter(
                     (partner) =>
                       partner.is_active,
                   )
-                  .map((partner) => (
-                    <option
-                      key={partner.id}
-                      value={partner.id}
-                    >
-                      {partner.name} -{" "}
-                      {formatLabel(
-                        partner.partner_tier,
-                      )}
-                    </option>
-                  ))}
-              </select>
-            </div>
+                  .map((partner) => ({
+                    value: partner.id.toString(),
+                    label: partner.name,
+                    description: `${formatLabel(partner.partner_type)} · ${partner.partner_program} · ${formatLabel(partner.partner_tier)}`,
+                    searchText: `${partner.name} ${partner.partner_type} ${partner.partner_program} ${partner.partner_tier}`,
+                  }))}
+              />
 
             {/* EMPLOYEE */}
 
-            <div className="space-y-2">
-              <Label htmlFor="employee_id">
-                Employee *
-              </Label>
-
-              <select
+            <SearchSelect
                 id="employee_id"
-                name="employee_id"
+                label="Employee"
+                placeholder="Search by employee name, code, or designation..."
                 value={form.employee_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select employee
-                </option>
-
-                {employees
+                onChange={(value) =>
+                  setForm((previous) => ({
+                    ...previous,
+                    employee_id: value,
+                  }))
+                }
+                options={employees
                   .filter(
                     (employee) =>
                       employee.is_active,
                   )
-                  .map((employee) => (
-                    <option
-                      key={employee.id}
-                      value={employee.id}
-                    >
-                      {employee.employee_code} -{" "}
-                      {employee.full_name} -{" "}
-                      {employee.designation}
-                    </option>
-                  ))}
-              </select>
-            </div>
+                  .map((employee) => ({
+                    value: employee.id.toString(),
+                    label: employee.full_name,
+                    description: `${employee.employee_code} · ${employee.designation}`,
+                    searchText: `${employee.full_name} ${employee.employee_code} ${employee.designation}`,
+                  }))}
+              />
 
             {/* CERTIFICATION */}
 

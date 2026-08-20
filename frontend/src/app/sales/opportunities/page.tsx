@@ -86,6 +86,107 @@ async function getOpportunityOwners(): Promise<
   );
 }
 
+interface LeadComboboxProps {
+  leads: SalesLead[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function LeadCombobox({
+  leads,
+  value,
+  onChange,
+}: LeadComboboxProps) {
+  const selectedLead = leads.find(
+    (lead) => lead.id.toString() === value,
+  );
+  const [query, setQuery] = useState(
+    selectedLead
+      ? `${selectedLead.company_name} (${selectedLead.contact_name})`
+      : "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredLeads = leads.filter(
+    (lead) =>
+      !normalizedQuery ||
+      lead.company_name.toLowerCase().includes(normalizedQuery) ||
+      lead.contact_name.toLowerCase().includes(normalizedQuery) ||
+      lead.contact_email?.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="lead_search">
+        Linked lead *
+      </Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id="lead_search"
+          type="search"
+          autoComplete="off"
+          value={query}
+          required
+          placeholder="Search by company, contact, or email..."
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls="lead_search-options"
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id="lead_search-options"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredLeads.length > 0 ? (
+              filteredLeads.map((lead) => (
+                <button
+                  key={lead.id}
+                  type="button"
+                  role="option"
+                  aria-selected={value === lead.id.toString()}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(
+                      `${lead.company_name} (${lead.contact_name})`,
+                    );
+                    onChange(lead.id.toString());
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {lead.company_name}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {lead.contact_name}
+                    {lead.contact_email ? ` · ${lead.contact_email}` : ""}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No leads match your search.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface OwnerComboboxProps {
   id: string;
   label: string;
@@ -209,8 +310,8 @@ const EMPTY_FORM: OpportunityFormState = {
   industry: "",
   deal_value: "",
   currency: "USD",
-  pipeline_stage: "PROSPECTING",
-  win_probability: "0",
+  pipeline_stage: "QUALIFICATION",
+  win_probability: "",
   expected_close_date: "",
   expected_start_date: "",
   sales_owner_id: "",
@@ -433,11 +534,7 @@ function OpportunityFormModal({
     }));
   }
 
-  function handleLeadChange(
-    event: ChangeEvent<HTMLSelectElement>,
-  ): void {
-    const leadId = event.target.value;
-
+  function handleLeadChange(leadId: string): void {
     const selectedLead = leads.find(
       (lead) => lead.id === Number(leadId),
     );
@@ -525,34 +622,11 @@ function OpportunityFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="lead_id">
-                Linked lead *
-              </Label>
-
-              <select
-                id="lead_id"
-                name="lead_id"
-                value={form.lead_id}
-                onChange={handleLeadChange}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-                required
-              >
-                <option value="">
-                  Select a lead
-                </option>
-
-                {leads.map((lead) => (
-                  <option
-                    key={lead.id}
-                    value={lead.id}
-                  >
-                    #{lead.id} - {lead.company_name} (
-                    {lead.contact_name})
-                  </option>
-                ))}
-              </select>
-            </div>
+            <LeadCombobox
+              leads={leads}
+              value={form.lead_id}
+              onChange={handleLeadChange}
+            />
 
             <div className="space-y-2">
               <Label htmlFor="opportunity_name">
@@ -662,9 +736,6 @@ function OpportunityFormModal({
                 onChange={handleChange}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
               >
-                <option value="PROSPECTING">
-                  Prospecting
-                </option>
                 <option value="QUALIFICATION">
                   Qualification
                 </option>
@@ -697,6 +768,7 @@ function OpportunityFormModal({
                 type="number"
                 min="0"
                 max="100"
+                placeholder="Enter 0 to 100"
                 value={form.win_probability}
                 onChange={handleChange}
               />

@@ -65,6 +65,102 @@ import type {
   UpdateProposalRequest,
 } from "@/types/presales";
 
+interface SolutionComboboxProps {
+  solutions: Solution[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SolutionCombobox({
+  solutions,
+  value,
+  onChange,
+}: SolutionComboboxProps) {
+  const selectedSolution = solutions.find(
+    (solution) => solution.id.toString() === value,
+  );
+  const [query, setQuery] = useState(
+    selectedSolution?.solution_name ?? "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredSolutions = solutions.filter(
+    (solution) =>
+      !normalizedQuery ||
+      solution.solution_name.toLowerCase().includes(normalizedQuery) ||
+      solution.delivery_model.toLowerCase().includes(normalizedQuery) ||
+      solution.solution_status.toLowerCase().includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2 md:col-span-2">
+      <Label htmlFor="proposal_solution_search">
+        Solution *
+      </Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id="proposal_solution_search"
+          type="search"
+          autoComplete="off"
+          value={query}
+          required
+          placeholder="Search by solution, delivery model, or status..."
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls="proposal_solution_search-options"
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id="proposal_solution_search-options"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredSolutions.length > 0 ? (
+              filteredSolutions.map((solution) => (
+                <button
+                  key={solution.id}
+                  type="button"
+                  role="option"
+                  aria-selected={value === solution.id.toString()}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(solution.solution_name);
+                    onChange(solution.id.toString());
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {solution.solution_name}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {solution.delivery_model} · {solution.solution_status}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No solutions match your search.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ================================================= */
 /* FORM TYPES */
 /* ================================================= */
@@ -379,36 +475,16 @@ function ProposalFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="solution_id">
-                Solution *
-              </Label>
-
-              <select
-                id="solution_id"
-                name="solution_id"
-                value={form.solution_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-              >
-                <option value="">
-                  Select a solution
-                </option>
-
-                {solutions.map(
-                  (solution) => (
-                    <option
-                      key={solution.id}
-                      value={solution.id}
-                    >
-                      #{solution.id} -{" "}
-                      {solution.solution_name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+            <SolutionCombobox
+              solutions={solutions}
+              value={form.solution_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  solution_id: value,
+                }))
+              }
+            />
 
             <div className="space-y-2">
               <Label htmlFor="proposal_title">
