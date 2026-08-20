@@ -4,6 +4,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -13,7 +14,7 @@ from app.models.presale import (
     ResourceRequirement,
     Solution,
 )
-from app.models.resource_manager import ResourceRequest
+from app.models.resource_manager import ResourceAllocation, ResourceRequest
 from app.models.sale import Lead, Opportunity
 from app.models.user import User
 from app.repositories.presale_repository import (
@@ -1258,6 +1259,18 @@ def approve_proposal(
     proposal.approval_status = "APPROVED"
     proposal.proposal_status = "ACCEPTED"
     proposal.rejection_reason = None
+
+    soft_bookings = db.scalars(
+        select(ResourceAllocation).where(
+            ResourceAllocation.solution_id == proposal.solution_id,
+            ResourceAllocation.allocation_type == "SOFT_BOOKING",
+            ResourceAllocation.allocation_status.in_({"PENDING", "CONFIRMED"}),
+        )
+    ).all()
+
+    for allocation in soft_bookings:
+        allocation.allocation_type = "HARD_BOOKING"
+        allocation.allocation_status = "CONFIRMED"
 
     db.commit()
     db.refresh(proposal)
