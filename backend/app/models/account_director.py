@@ -1,3 +1,4 @@
+# defines the database models for account director related entities, including accounts, contracts, customer health records, and account opportunities
 from datetime import date, datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING

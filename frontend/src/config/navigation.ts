@@ -1,3 +1,4 @@
+// contains navigation items
 import {
   Activity,
   BadgeCheck,

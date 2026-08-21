@@ -1,3 +1,4 @@
+// manages authentication state and provides authentication-related functions to the rest of the application
 "use client";
 
 import {

@@ -1,3 +1,4 @@
+# defines the authentication and authorization dependencies for FastAPI routes, including user retrieval and role-based access control
 from collections.abc import Callable
 
 import jwt

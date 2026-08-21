@@ -1,3 +1,4 @@
+// contains the types and interfaces for the account director section of the application, including accounts, contracts, customer health records, and account opportunities
 export type CustomerHealthStatus =
   | "GREEN"
   | "YELLOW"

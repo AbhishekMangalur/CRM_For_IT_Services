@@ -1,3 +1,4 @@
+// contains the api calls and frontend utilities
 import { api } from "@/lib/api";
 
 import type {

@@ -1,3 +1,4 @@
+// contains the frontend code for the account director accounts page
 "use client";
 
 import { useConfirm } from "@/providers/ConfirmProvider";

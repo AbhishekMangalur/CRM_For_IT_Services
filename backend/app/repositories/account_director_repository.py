@@ -1,3 +1,4 @@
+# communication with the database for account director related models
 from typing import Any, TypeVar
 
 from sqlalchemy import select

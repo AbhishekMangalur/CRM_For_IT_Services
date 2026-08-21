@@ -1,3 +1,4 @@
+# defines the API routes for account director related operations
 from fastapi import (
     APIRouter,
     Depends,
