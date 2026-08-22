@@ -7,6 +7,9 @@ from app.models.resource_manager import (
     ResourceRequest,
     Skill,
 )
+from app.services.resource_manager_service import (
+    complete_expired_resource_allocations,
+)
 
 
 PROFICIENCY_SCORE = {
@@ -21,6 +24,8 @@ def get_matching_resources(
     db: Session,
     request_id: int,
 ):
+    complete_expired_resource_allocations(db)
+
     # =====================================================
     # 1. Get Resource Request
     # =====================================================
@@ -107,6 +112,12 @@ def get_matching_resources(
             "AVAILABLE",
             "PARTIALLY_AVAILABLE",
         }:
+            continue
+
+        if (
+            employee.available_from is not None
+            and employee.available_from > resource_request.required_from
+        ):
             continue
 
         # -------------------------------------------------

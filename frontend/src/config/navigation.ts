@@ -241,9 +241,4 @@ const rfpNavigation: NavigationItem[] = [
     href: "/rfp/evaluations",
     icon: FileCheck2,
   },
-  {
-    title: "RFP Assignments",
-    href: "/rfp/assignments",
-    icon: Users,
-  },
 ];

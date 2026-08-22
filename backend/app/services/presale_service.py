@@ -1017,6 +1017,50 @@ def get_resource_requirement(
     )
 
 
+def synchronize_resource_request_from_requirement(
+    db: Session,
+    requirement: ResourceRequirement,
+) -> None:
+    resource_request = (
+        db.query(ResourceRequest)
+        .filter(
+            ResourceRequest.resource_requirement_id
+            == requirement.id,
+        )
+        .one_or_none()
+    )
+
+    if resource_request is None:
+        return
+
+    solution = require_solution(
+        db,
+        requirement.solution_id,
+    )
+
+    resource_request.opportunity_id = solution.opportunity_id
+    resource_request.solution_id = requirement.solution_id
+    resource_request.requested_role = requirement.role_name
+    resource_request.required_skill = requirement.skill_name
+    resource_request.experience_level = requirement.experience_level
+    resource_request.minimum_experience_years = (
+        requirement.minimum_experience_years
+    )
+    resource_request.quantity = requirement.quantity
+    resource_request.required_until = (
+        add_months(
+            resource_request.required_from,
+            requirement.duration_months,
+        )
+        if requirement.duration_months is not None
+        else None
+    )
+    resource_request.allocation_percentage = (
+        requirement.allocation_percentage
+    )
+    resource_request.location_type = requirement.location_type
+
+
 def update_resource_requirement(
     db: Session,
     requirement_id: int,
@@ -1034,11 +1078,18 @@ def update_resource_requirement(
     )
 
     try:
-        return update_record(
+        for field_name, value in data.items():
+            setattr(requirement, field_name, value)
+
+        db.flush()
+        synchronize_resource_request_from_requirement(
             db,
             requirement,
-            data,
         )
+        db.commit()
+        db.refresh(requirement)
+
+        return requirement
     except IntegrityError as error:
         handle_integrity_error(db, error)
 

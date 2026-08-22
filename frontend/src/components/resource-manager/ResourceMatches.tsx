@@ -3,7 +3,6 @@
 import {
   useState,
 } from "react";
-import { useRouter } from "next/navigation";
 import axios from "axios";
 import {
   Loader2,
@@ -55,8 +54,6 @@ function badgeClass(
 export function ResourceMatches({
   request,
 }: Props) {
-  const router = useRouter();
-
   const [matches, setMatches] =
     useState<ResourceMatch[]>([]);
 
@@ -100,41 +97,6 @@ export function ResourceMatches({
     } finally {
       setLoading(false);
     }
-  }
-
-  function allocate(
-    match: ResourceMatch,
-  ) {
-    const params =
-      new URLSearchParams();
-
-    params.set(
-      "employee_id",
-      match.employee_id.toString(),
-    );
-
-    params.set(
-      "resource_request_id",
-      request.id.toString(),
-    );
-
-    if (request.opportunity_id) {
-      params.set(
-        "opportunity_id",
-        request.opportunity_id.toString(),
-      );
-    }
-
-    if (request.solution_id) {
-      params.set(
-        "solution_id",
-        request.solution_id.toString(),
-      );
-    }
-
-    router.push(
-      `/resource-manager/resource-allocations?${params.toString()}`,
-    );
   }
 
   return (
@@ -225,9 +187,6 @@ export function ResourceMatches({
                   <th className="p-3">
                     Status
                   </th>
-                  <th className="p-3 text-right">
-                    Action
-                  </th>
                 </tr>
               </thead>
 
@@ -311,17 +270,6 @@ export function ResourceMatches({
                       </Badge>
                     </td>
 
-                    <td className="p-3 text-right">
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() =>
-                          allocate(match)
-                        }
-                      >
-                        Allocate
-                      </Button>
-                    </td>
                   </tr>
                 ))}
               </tbody>

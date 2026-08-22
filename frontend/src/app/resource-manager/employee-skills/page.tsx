@@ -70,6 +70,113 @@ interface EmployeeSkillFormState {
   certification_expiry_date: string;
 }
 
+interface SearchOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface SearchableSelectProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  emptyMessage: string;
+  options: SearchOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchableSelect({
+  id,
+  label,
+  placeholder,
+  emptyMessage,
+  options,
+  value,
+  onChange,
+}: SearchableSelectProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState(
+    selectedOption?.label ?? "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label} *</Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          required
+          value={query}
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {emptyMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const EMPTY_FORM: EmployeeSkillFormState = {
   employee_id: "",
   skill_id: "",
@@ -246,6 +353,29 @@ function EmployeeSkillFormModal({
         : EMPTY_FORM,
     );
 
+  const employeeOptions = employees.map((employee) => ({
+    value: employee.id.toString(),
+    label: employee.full_name,
+    description: `${employee.employee_code} · ${employee.designation} · ${employee.email}`,
+    searchText: [
+      employee.full_name,
+      employee.employee_code,
+      employee.designation,
+      employee.department,
+      employee.email,
+    ]
+      .join(" ")
+      .toLowerCase(),
+  }));
+  const skillOptions = skills
+    .filter((skill) => skill.is_active)
+    .map((skill) => ({
+      value: skill.id.toString(),
+      label: skill.name,
+      description: skill.category,
+      searchText: `${skill.name} ${skill.category}`.toLowerCase(),
+    }));
+
   function handleChange(
     event:
       | ChangeEvent<HTMLInputElement>
@@ -321,70 +451,35 @@ function EmployeeSkillFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="employee_id">
-                Employee *
-              </Label>
+            <SearchableSelect
+              id="employee_search"
+              label="Employee"
+              placeholder="Search by employee name, code, designation, or email..."
+              emptyMessage="No employees match your search."
+              options={employeeOptions}
+              value={form.employee_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  employee_id: value,
+                }))
+              }
+            />
 
-              <select
-                id="employee_id"
-                name="employee_id"
-                value={form.employee_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select an employee
-                </option>
-
-                {employees.map(
-                  (employee) => (
-                    <option
-                      key={employee.id}
-                      value={employee.id}
-                    >
-                      {employee.employee_code} -{" "}
-                      {employee.full_name}
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="skill_id">
-                Skill *
-              </Label>
-
-              <select
-                id="skill_id"
-                name="skill_id"
-                value={form.skill_id}
-                onChange={handleChange}
-                required
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  Select a skill
-                </option>
-
-                {skills
-                  .filter(
-                    (skill) =>
-                      skill.is_active,
-                  )
-                  .map((skill) => (
-                    <option
-                      key={skill.id}
-                      value={skill.id}
-                    >
-                      {skill.name} -{" "}
-                      {skill.category}
-                    </option>
-                  ))}
-              </select>
-            </div>
+            <SearchableSelect
+              id="skill_search"
+              label="Skill"
+              placeholder="Search by skill name or category..."
+              emptyMessage="No skills match your search."
+              options={skillOptions}
+              value={form.skill_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  skill_id: value,
+                }))
+              }
+            />
 
             <div className="space-y-2">
               <Label htmlFor="proficiency_level">

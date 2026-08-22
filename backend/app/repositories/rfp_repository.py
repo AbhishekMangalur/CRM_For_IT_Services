@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from app.models.rfp import (
     BidEvaluation,
     RFP,
-    RFPAssignment,
 )
 
 
@@ -14,7 +13,6 @@ RFPModel = TypeVar(
     "RFPModel",
     RFP,
     BidEvaluation,
-    RFPAssignment,
 )
 
 
@@ -41,7 +39,6 @@ def get_record_by_id(
         model_class,
         record_id,
     )
-
 
 def get_all_records(
     db: Session,
@@ -162,52 +159,4 @@ def get_latest_evaluation_for_rfp(
         )
         .order_by(BidEvaluation.id.desc())
         .limit(1)
-    )
-
-
-# =========================================================
-# Assignment queries
-# =========================================================
-
-
-def get_assignments_by_rfp(
-    db: Session,
-    rfp_id: int,
-) -> list[RFPAssignment]:
-    records = db.scalars(
-        select(RFPAssignment)
-        .where(
-            RFPAssignment.rfp_id == rfp_id
-        )
-        .order_by(RFPAssignment.id.desc())
-    ).all()
-
-    return list(records)
-
-
-def get_assignments_by_user(
-    db: Session,
-    user_id: int,
-) -> list[RFPAssignment]:
-    records = db.scalars(
-        select(RFPAssignment)
-        .where(
-            RFPAssignment.user_id == user_id
-        )
-        .order_by(RFPAssignment.id.desc())
-    ).all()
-
-    return list(records)
-
-
-def get_assignment_for_user(
-    db: Session,
-    rfp_id: int,
-    user_id: int,
-) -> RFPAssignment | None:
-    return db.scalar(
-        select(RFPAssignment).where(
-            RFPAssignment.rfp_id == rfp_id,
-            RFPAssignment.user_id == user_id,
-        )
     )

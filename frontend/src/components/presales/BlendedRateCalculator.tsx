@@ -42,26 +42,35 @@ interface Props {
   estimationId: number;
 }
 
-const DEFAULT_RATES: BlendedRateInput[] = [
+type EditableBlendedRate = Omit<
+  BlendedRateInput,
+  "resource_ratio" | "bill_rate" | "cost_rate"
+> & {
+  resource_ratio: number | "";
+  bill_rate: number | "";
+  cost_rate: number | "";
+};
+
+const DEFAULT_RATES: EditableBlendedRate[] = [
   {
     location_type: "ONSHORE",
-    resource_ratio: 0,
-    bill_rate: 0,
-    cost_rate: 0,
+    resource_ratio: "",
+    bill_rate: "",
+    cost_rate: "",
     currency: "USD",
   },
   {
     location_type: "NEARSHORE",
-    resource_ratio: 0,
-    bill_rate: 0,
-    cost_rate: 0,
+    resource_ratio: "",
+    bill_rate: "",
+    cost_rate: "",
     currency: "USD",
   },
   {
     location_type: "OFFSHORE",
-    resource_ratio: 0,
-    bill_rate: 0,
-    cost_rate: 0,
+    resource_ratio: "",
+    bill_rate: "",
+    cost_rate: "",
     currency: "USD",
   },
 ];
@@ -94,7 +103,7 @@ export function BlendedRateCalculator({
 }: Props) {
   const confirm = useConfirm();
   const [rates, setRates] =
-    useState<BlendedRateInput[]>(DEFAULT_RATES);
+    useState<EditableBlendedRate[]>(DEFAULT_RATES);
 
   const [result, setResult] =
     useState<BlendedRateResult | null>(null);
@@ -172,7 +181,9 @@ export function BlendedRateCalculator({
                 field === "location_type" ||
                 field === "currency"
                   ? value
-                  : Number(value),
+                  : value === ""
+                    ? ""
+                    : Number(value),
             }
           : rate,
       ),
@@ -184,9 +195,9 @@ export function BlendedRateCalculator({
       ...current,
       {
         location_type: "OFFSHORE",
-        resource_ratio: 0,
-        bill_rate: 0,
-        cost_rate: 0,
+        resource_ratio: "",
+        bill_rate: "",
+        cost_rate: "",
         currency: "USD",
       },
     ]);
@@ -216,7 +227,12 @@ export function BlendedRateCalculator({
       const data =
         await calculateBlendedRate({
           estimation_id: estimationId,
-          rates,
+          rates: rates.map((rate) => ({
+            ...rate,
+            resource_ratio: Number(rate.resource_ratio),
+            bill_rate: Number(rate.bill_rate),
+            cost_rate: Number(rate.cost_rate),
+          })),
         });
 
       setResult(data);

@@ -6,8 +6,6 @@ import {
   useState,
 } from "react";
 import axios from "axios";
-import { api } from "@/lib/api";
-
 import {
   getRfpDashboardResources,
 } from "@/lib/rfp-api";
@@ -15,7 +13,6 @@ import {
 import type {
   BidEvaluation,
   Rfp,
-  RfpAssignment,
   RfpDashboardData,
 } from "@/types/rfp";
 
@@ -41,14 +38,8 @@ interface RfpDashboardMetrics {
 
   averageEvaluationScore: number;
 
-  totalAssignments: number;
-  activeAssignments: number;
-
-  userNames: Record<number, string>;
-
   recentRfps: Rfp[];
   recentEvaluations: BidEvaluation[];
-  recentAssignments: RfpAssignment[];
 
   upcomingRfps: Rfp[];
 }
@@ -228,8 +219,6 @@ function isOverdue(
 function buildMetrics(
   rfps: Rfp[],
   evaluations: BidEvaluation[],
-  assignments: RfpAssignment[],
-  userNames: Record<number, string>,
 ): RfpDashboardMetrics {
   const pendingEvaluation =
     rfps.filter(
@@ -363,17 +352,6 @@ function buildMetrics(
         evaluations.length
       : 0;
 
-  const activeAssignments =
-    assignments.filter(
-      (assignment) =>
-        ![
-          "COMPLETED",
-          "CANCELLED",
-        ].includes(
-          assignment.assignment_status,
-        ),
-    );
-
   return {
     totalRfps:
       rfps.length,
@@ -415,14 +393,6 @@ function buildMetrics(
 
     averageEvaluationScore,
 
-    totalAssignments:
-      assignments.length,
-
-    activeAssignments:
-      activeAssignments.length,
-
-    userNames,
-
     recentRfps:
       sortByCreatedAt(
         rfps,
@@ -431,11 +401,6 @@ function buildMetrics(
     recentEvaluations:
       sortByCreatedAt(
         evaluations,
-      ).slice(0, 5),
-
-    recentAssignments:
-      sortByCreatedAt(
-        assignments,
       ).slice(0, 5),
 
     upcomingRfps:
@@ -481,34 +446,20 @@ export function useRfpDashboard(): UseRfpDashboardResult {
         setError(null);
 
         try {
-          const [
-            {
-              rfps,
-              evaluations,
-              assignments,
-            },
-            usersResponse,
-          ] = await Promise.all([
-            getRfpDashboardResources(),
-            api.get<Array<{ id: number; full_name: string }>>("/api/users"),
-          ]);
-
-          const userNames = Object.fromEntries(
-            usersResponse.data.map((user) => [user.id, user.full_name]),
-          );
+          const {
+            rfps,
+            evaluations,
+          } = await getRfpDashboardResources();
 
           setData({
             rfps,
             evaluations,
-            assignments,
           });
 
           setMetrics(
             buildMetrics(
               rfps,
               evaluations,
-              assignments,
-              userNames,
             ),
           );
         } catch (requestError) {

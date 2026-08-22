@@ -262,6 +262,9 @@ function getAvailabilityClasses(
     case "PARTIALLY_AVAILABLE":
       return "bg-amber-100 text-amber-700";
 
+    case "ALLOCATED":
+      return "bg-indigo-100 text-indigo-700";
+
     default:
       return "bg-blue-100 text-blue-700";
   }
@@ -729,6 +732,10 @@ function ResourceFormModal({
 
                 <option value="PARTIALLY_AVAILABLE">
                   Partially Available
+                </option>
+
+                <option value="ALLOCATED">
+                  Allocated
                 </option>
               </select>
             </div>
@@ -1388,6 +1395,9 @@ export default function PresalesResourceRequirementsPage() {
                   </option>
                   <option value="PARTIALLY_AVAILABLE">
                     Partially Available
+                  </option>
+                  <option value="ALLOCATED">
+                    Allocated
                   </option>
                   <option value="PENDING">
                     Pending

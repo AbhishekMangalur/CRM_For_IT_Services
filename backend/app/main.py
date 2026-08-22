@@ -26,10 +26,14 @@ from app.routes.executive_kpi import router as executive_kpi_router
 from app.routes.presales_template import router as presales_template_router
 from app.core.database import (
     Base,
+    SessionLocal,
     engine,
     ensure_rfp_completed_at_column,
     ensure_proposal_document_columns,
     normalize_currency_to_usd,
+)
+from app.services.resource_manager_service import (
+    complete_expired_resource_allocations,
 )
 
 
@@ -49,6 +53,8 @@ def create_tables() -> None:
         ensure_rfp_completed_at_column()
         ensure_proposal_document_columns()
         normalize_currency_to_usd()
+        with SessionLocal() as db:
+            complete_expired_resource_allocations(db)
         app.state.database_available = True
     except SQLAlchemyError as error:
         app.state.database_available = False

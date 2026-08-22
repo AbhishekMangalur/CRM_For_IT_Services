@@ -7,6 +7,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.models.alliance import PartnerDealRegistration
 from app.models.presale import Solution
 from app.models.rfp import RFP
 from app.models.resource_manager import ResourceAllocation, ResourceRequest
@@ -19,7 +20,10 @@ from app.repositories.sales_repository import (
     get_record_by_id,
     update_record,
 )
-from app.services.resource_manager_service import update_employee_utilization
+from app.services.resource_manager_service import (
+    synchronize_linked_requirement_allocation_status,
+    update_employee_utilization,
+)
 
 
 def require_user(
@@ -202,17 +206,21 @@ def validate_opportunity_relations(
         )
 
 
-def convert_lead_for_closed_won_opportunity(
+def synchronize_lead_for_opportunity_outcome(
     db: Session,
     opportunity: Opportunity,
     data: dict[str, Any],
 ) -> None:
+    next_status = data.get("status", opportunity.status).upper()
     next_pipeline_stage = data.get(
         "pipeline_stage",
         opportunity.pipeline_stage,
-    )
+    ).upper()
 
-    if next_pipeline_stage != "CLOSED_WON":
+    is_won = next_status == "WON" and next_pipeline_stage == "CLOSED_WON"
+    is_lost = next_status == "LOST" and next_pipeline_stage == "CLOSED_LOST"
+
+    if not is_won and not is_lost:
         return
 
     lead_id = data.get("lead_id", opportunity.lead_id)
@@ -221,7 +229,7 @@ def convert_lead_for_closed_won_opportunity(
         return
 
     lead = require_lead(db, lead_id)
-    lead.lead_status = "CONVERTED"
+    lead.lead_status = "CONVERTED" if is_won else "UNQUALIFIED"
 
 
 def synchronize_bookings_for_opportunity_outcome(
@@ -236,14 +244,13 @@ def synchronize_bookings_for_opportunity_outcome(
     ).upper()
 
     is_won = next_status == "WON" and next_pipeline_stage == "CLOSED_WON"
-    is_lost = next_status == "LOST" or next_pipeline_stage == "CLOSED_LOST"
+    is_lost = next_status == "LOST" and next_pipeline_stage == "CLOSED_LOST"
 
     if not is_won and not is_lost:
         return
 
-    linked_soft_bookings = db.scalars(
+    linked_allocations = db.scalars(
         select(ResourceAllocation).where(
-            ResourceAllocation.allocation_type == "SOFT_BOOKING",
             ResourceAllocation.allocation_status.in_({"PENDING", "CONFIRMED"}),
             or_(
                 ResourceAllocation.opportunity_id == opportunity.id,
@@ -261,36 +268,73 @@ def synchronize_bookings_for_opportunity_outcome(
         )
     ).all()
 
-    for allocation in linked_soft_bookings:
-        if is_won:
+    affected_resource_request_ids: set[int] = set()
+
+    for allocation in linked_allocations:
+        if is_won and allocation.allocation_type == "SOFT_BOOKING":
             allocation.allocation_type = "HARD_BOOKING"
             allocation.allocation_status = "CONFIRMED"
-        else:
+        elif is_lost:
             allocation.allocation_status = "CANCELLED"
+            if allocation.resource_request_id is not None:
+                affected_resource_request_ids.add(
+                    allocation.resource_request_id,
+                )
             update_employee_utilization(
                 allocation.employee,
                 -allocation.allocation_percentage,
             )
 
-    if is_won:
-        linked_rfps = db.scalars(
-            select(RFP).where(
-                RFP.opportunity_id == opportunity.id,
+    if is_lost:
+        db.flush()
+        for resource_request_id in affected_resource_request_ids:
+            synchronize_linked_requirement_allocation_status(
+                db,
+                resource_request_id,
             )
-        ).all()
 
-        for rfp in linked_rfps:
-            rfp.rfp_status = "WON"
-            if rfp.completed_at is None:
-                rfp.completed_at = datetime.now(timezone.utc)
+    linked_rfps = db.scalars(
+        select(RFP).where(
+            RFP.opportunity_id == opportunity.id,
+        )
+    ).all()
 
-            for assignment in rfp.assignments:
-                if assignment.assignment_status not in {
-                    "COMPLETED",
-                    "CANCELLED",
-                }:
-                    assignment.assignment_status = "COMPLETED"
+    for rfp in linked_rfps:
+        rfp.rfp_status = "WON" if is_won else "LOST"
+        if rfp.completed_at is None:
+            rfp.completed_at = datetime.now(timezone.utc)
 
+
+def synchronize_deal_registrations_for_opportunity_outcome(
+    db: Session,
+    opportunity: Opportunity,
+    data: dict[str, Any],
+) -> None:
+    next_status = data.get("status", opportunity.status).upper()
+    next_pipeline_stage = data.get(
+        "pipeline_stage",
+        opportunity.pipeline_stage,
+    ).upper()
+
+    is_won = next_status == "WON" and next_pipeline_stage == "CLOSED_WON"
+    is_lost = next_status == "LOST" and next_pipeline_stage == "CLOSED_LOST"
+
+    if not is_won and not is_lost:
+        return
+
+    registrations = db.scalars(
+        select(PartnerDealRegistration).where(
+            PartnerDealRegistration.opportunity_id == opportunity.id,
+            PartnerDealRegistration.registration_status.in_(
+                {"PENDING", "APPROVED"},
+            ),
+        )
+    ).all()
+
+    for registration in registrations:
+        registration.registration_status = (
+            "APPROVED" if is_won else "REJECTED"
+        )
 
 def create_opportunity(
     db: Session,
@@ -339,13 +383,19 @@ def update_opportunity(
 
     validate_opportunity_relations(db, data)
 
-    convert_lead_for_closed_won_opportunity(
+    synchronize_lead_for_opportunity_outcome(
         db,
         opportunity,
         data,
     )
 
     synchronize_bookings_for_opportunity_outcome(
+        db,
+        opportunity,
+        data,
+    )
+
+    synchronize_deal_registrations_for_opportunity_outcome(
         db,
         opportunity,
         data,

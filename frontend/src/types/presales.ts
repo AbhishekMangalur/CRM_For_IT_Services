@@ -188,6 +188,7 @@ export type LocationType =
 export type AvailabilityStatus =
   | "AVAILABLE"
   | "PARTIALLY_AVAILABLE"
+  | "ALLOCATED"
   | "PENDING"
   | string;
 

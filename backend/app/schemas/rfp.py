@@ -251,7 +251,6 @@ class RFPResponse(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-
 # =========================================================
 # Bid Evaluation
 # =========================================================
@@ -384,90 +383,6 @@ class BidEvaluationResponse(BaseModel):
     recommendation: str
     evaluated_by: int
     comments: str | None
-    created_at: datetime
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-# =========================================================
-# RFP Assignment
-# =========================================================
-
-
-class RFPAssignmentCreate(BaseModel):
-    rfp_id: int = Field(gt=0)
-
-    user_id: int = Field(gt=0)
-
-    assignment_role: str = Field(
-        min_length=2,
-        max_length=50,
-    )
-
-    assignment_status: str = Field(
-        default="ASSIGNED",
-        max_length=30,
-    )
-
-    due_date: date | None = None
-
-    notes: str | None = None
-
-
-class RFPAssignmentPut(BaseModel):
-    rfp_id: int = Field(gt=0)
-
-    user_id: int = Field(gt=0)
-
-    assignment_role: str = Field(
-        min_length=2,
-        max_length=50,
-    )
-
-    assignment_status: str = Field(
-        min_length=2,
-        max_length=30,
-    )
-
-    due_date: date | None = None
-
-    notes: str | None = None
-
-
-class RFPAssignmentPatch(BaseModel):
-    rfp_id: int | None = Field(
-        default=None,
-        gt=0,
-    )
-
-    user_id: int | None = Field(
-        default=None,
-        gt=0,
-    )
-
-    assignment_role: str | None = Field(
-        default=None,
-        max_length=50,
-    )
-
-    assignment_status: str | None = Field(
-        default=None,
-        max_length=30,
-    )
-
-    due_date: date | None = None
-
-    notes: str | None = None
-
-
-class RFPAssignmentResponse(BaseModel):
-    id: int
-    rfp_id: int
-    user_id: int
-    assignment_role: str
-    assignment_status: str
-    due_date: date | None
-    notes: str | None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

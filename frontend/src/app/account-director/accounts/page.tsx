@@ -52,6 +52,7 @@ import {
   getAccounts,
   replaceAccount,
 } from "@/lib/account-director-api";
+import { getSalesOpportunities } from "@/lib/sales-api";
 import { useAuth } from "@/hooks/useAuth";
 import type {
   AccountDirectorAccount,
@@ -61,6 +62,102 @@ import type {
   CustomerHealthStatus,
   SlaStatus,
 } from "@/types/account-director";
+import type { SalesOpportunity } from "@/types/sales";
+
+interface ClientOption {
+  name: string;
+  description: string;
+  searchText: string;
+}
+
+interface ClientComboboxProps {
+  clients: ClientOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function ClientCombobox({
+  clients,
+  value,
+  onChange,
+}: ClientComboboxProps) {
+  const [query, setQuery] = useState(value);
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredClients = clients.filter(
+    (client) =>
+      !normalizedQuery ||
+      client.searchText.includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="account_client_search">
+        Client *
+      </Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id="account_client_search"
+          type="search"
+          autoComplete="off"
+          required
+          value={query}
+          placeholder="Search by client, opportunity, industry, or service..."
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls="account-client-options"
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id="account-client-options"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredClients.length > 0 ? (
+              filteredClients.map((client) => (
+                <button
+                  key={client.name}
+                  type="button"
+                  role="option"
+                  aria-selected={value === client.name}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(client.name);
+                    onChange(client.name);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {client.name}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {client.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No clients match your search.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 interface AccountFormState {
   account_name: string;
@@ -281,7 +378,9 @@ function formToPayload(
 
 interface AccountFormModalProps {
   account: AccountDirectorAccount | null;
+  opportunities: SalesOpportunity[];
   currentUserId: number;
+  currentUserName: string;
   isSaving: boolean;
   error: string;
   onClose: () => void;
@@ -292,7 +391,9 @@ interface AccountFormModalProps {
 
 function AccountFormModal({
   account,
+  opportunities,
   currentUserId,
+  currentUserName,
   isSaving,
   error,
   onClose,
@@ -304,6 +405,57 @@ function AccountFormModal({
         ? accountToForm(account)
         : createEmptyForm(currentUserId),
     );
+
+  const clientsByName = new Map<string, ClientOption>();
+
+  for (const opportunity of opportunities) {
+    const name = opportunity.client_name.trim();
+
+    if (!name) {
+      continue;
+    }
+
+    const existing = clientsByName.get(name.toLowerCase());
+    const details = [
+      opportunity.opportunity_name,
+      opportunity.industry,
+      opportunity.service_type,
+    ].filter(Boolean);
+
+    clientsByName.set(name.toLowerCase(), {
+      name,
+      description: existing
+        ? Array.from(
+            new Set([
+              ...existing.description.split(" · "),
+              ...details,
+            ]),
+          ).join(" · ")
+        : details.join(" · "),
+      searchText: [
+        existing?.searchText ?? "",
+        name,
+        ...details,
+      ]
+        .join(" ")
+        .toLowerCase(),
+    });
+  }
+
+  if (
+    account &&
+    !clientsByName.has(account.account_name.toLowerCase())
+  ) {
+    clientsByName.set(account.account_name.toLowerCase(), {
+      name: account.account_name,
+      description: account.industry,
+      searchText: `${account.account_name} ${account.industry}`.toLowerCase(),
+    });
+  }
+
+  const clientOptions = Array.from(clientsByName.values()).sort(
+    (first, second) => first.name.localeCompare(second.name),
+  );
 
   function handleChange(
     event:
@@ -389,20 +541,16 @@ function AccountFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="account_name">
-                Account name *
-              </Label>
-
-              <Input
-                id="account_name"
-                name="account_name"
-                value={form.account_name}
-                onChange={handleChange}
-                placeholder="ABC Technologies"
-                required
-              />
-            </div>
+            <ClientCombobox
+              clients={clientOptions}
+              value={form.account_name}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  account_name: value,
+                }))
+              }
+            />
 
             <div className="space-y-2">
               <Label htmlFor="industry">
@@ -479,15 +627,13 @@ function AccountFormModal({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="account_director_id">
+              <Label htmlFor="account_director_name">
                 Account Director
               </Label>
 
               <Input
-                id="account_director_id"
-                name="account_director_id"
-                type="number"
-                value={form.account_director_id}
+                id="account_director_name"
+                value={currentUserName}
                 readOnly
                 className="bg-slate-50"
               />
@@ -829,6 +975,9 @@ export default function AccountDirectorAccountsPage() {
   const [accounts, setAccounts] = useState<
     AccountDirectorAccount[]
   >([]);
+  const [opportunities, setOpportunities] = useState<
+    SalesOpportunity[]
+  >([]);
 
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] =
@@ -862,12 +1011,19 @@ export default function AccountDirectorAccountsPage() {
       setError("");
 
       try {
-        const records = await getAccounts({
-          skip: 0,
-          limit: 100,
-        });
+        const [records, opportunityRecords] = await Promise.all([
+          getAccounts({
+            skip: 0,
+            limit: 100,
+          }),
+          getSalesOpportunities({
+            skip: 0,
+            limit: 500,
+          }),
+        ]);
 
         setAccounts(records);
+        setOpportunities(opportunityRecords);
       } catch (requestError) {
         setError(getErrorMessage(requestError));
       } finally {
@@ -876,7 +1032,11 @@ export default function AccountDirectorAccountsPage() {
     }, []);
 
   useEffect(() => {
-    void loadAccounts();
+    const timeoutId = window.setTimeout(() => {
+      void loadAccounts();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadAccounts]);
 
   const filteredAccounts = useMemo(() => {
@@ -1417,7 +1577,9 @@ export default function AccountDirectorAccountsPage() {
         {showForm && user && (
           <AccountFormModal
             account={editingAccount}
+            opportunities={opportunities}
             currentUserId={user.id}
+            currentUserName={user.full_name}
             isSaving={isSaving}
             error={formError}
             onClose={() => {

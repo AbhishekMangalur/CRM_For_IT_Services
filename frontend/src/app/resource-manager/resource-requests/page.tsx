@@ -1,7 +1,5 @@
 "use client";
 
-import { useConfirm } from "@/providers/ConfirmProvider";
-
 import {
   ChangeEvent,
   FormEvent,
@@ -16,15 +14,12 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
-  Edit3,
   Eye,
   Layers3,
   Loader2,
   MapPin,
-  Plus,
   RefreshCcw,
   Search,
-  Trash2,
   UserRound,
   Users,
   X,
@@ -47,14 +42,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ResourceMatches } from "@/components/resource-manager/ResourceMatches";
 
-import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 
 import {
-  createResourceRequest,
-  deleteResourceRequest,
   getResourceRequests,
-  replaceResourceRequest,
 } from "@/lib/resource-manager-api";
 
 import { getSalesOpportunities } from "@/lib/sales-api";
@@ -116,6 +107,127 @@ interface ResourceRequestFormState {
     ResourceRequestStatus;
 
   notes: string;
+}
+
+interface RequestLinkOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface SearchableRequestLinkProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  emptyMessage: string;
+  options: RequestLinkOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function SearchableRequestLink({
+  id,
+  label,
+  placeholder,
+  emptyMessage,
+  options,
+  value,
+  onChange,
+}: SearchableRequestLinkProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState(
+    selectedOption?.label ?? "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          value={query}
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {value && (
+              <button
+                type="button"
+                className="block w-full rounded px-3 py-2 text-left text-sm text-slate-500 hover:bg-blue-50"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  setQuery("");
+                  onChange("");
+                  setIsOpen(false);
+                }}
+              >
+                Clear selection
+              </button>
+            )}
+
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {emptyMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 const EMPTY_FORM: ResourceRequestFormState = {
@@ -404,6 +516,8 @@ interface ResourceRequestFormModalProps {
   ) => Promise<void>;
 }
 
+// Kept private for compatibility with pending form extraction work.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ResourceRequestFormModal({
   request,
   opportunities,
@@ -421,6 +535,54 @@ function ResourceRequestFormModal({
         ? requestToForm(request)
         : EMPTY_FORM,
     );
+
+  const opportunityOptions = opportunities.map(
+    (opportunity) => ({
+      value: opportunity.id.toString(),
+      label: opportunity.opportunity_name,
+      description: `${opportunity.client_name} · ${opportunity.service_type}`,
+      searchText: [
+        opportunity.opportunity_name,
+        opportunity.client_name,
+        opportunity.service_type,
+      ]
+        .join(" ")
+        .toLowerCase(),
+    }),
+  );
+  const selectableSolutions = solutions.filter(
+    (solution) =>
+      !form.opportunity_id ||
+      solution.opportunity_id.toString() ===
+        form.opportunity_id,
+  );
+  const solutionOptions = selectableSolutions.map(
+    (solution) => {
+      const opportunity = opportunities.find(
+        (record) => record.id === solution.opportunity_id,
+      );
+
+      return {
+        value: solution.id.toString(),
+        label: solution.solution_name,
+        description: [
+          opportunity?.opportunity_name,
+          formatLabel(solution.delivery_model),
+          solution.technology_stack,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        searchText: [
+          solution.solution_name,
+          opportunity?.opportunity_name ?? "",
+          solution.delivery_model,
+          solution.technology_stack,
+        ]
+          .join(" ")
+          .toLowerCase(),
+      };
+    },
+  );
 
   function handleChange(
     event:
@@ -546,91 +708,55 @@ function ResourceRequestFormModal({
 
             {/* Opportunity */}
 
-            <div className="space-y-2">
-              <Label htmlFor="opportunity_id">
-                Sales Opportunity
-              </Label>
-
-              <select
-                id="opportunity_id"
-                name="opportunity_id"
-                value={
-                  form.opportunity_id
-                }
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  No opportunity
-                </option>
-
-                {opportunities.map(
-                  (opportunity) => (
-                    <option
-                      key={
-                        opportunity.id
-                      }
-                      value={
-                        opportunity.id
-                      }
-                    >
-                      #
-                      {
-                        opportunity.id
-                      }{" "}
-                      -{" "}
-                      {
-                        opportunity.opportunity_name
-                      }
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+            <SearchableRequestLink
+              key={`opportunity-${form.opportunity_id}`}
+              id="opportunity_search"
+              label="Sales Opportunity"
+              placeholder="Search by opportunity, client, or service..."
+              emptyMessage="No opportunities match your search."
+              options={opportunityOptions}
+              value={form.opportunity_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  opportunity_id: value,
+                  solution_id:
+                    solutions.some(
+                      (solution) =>
+                        solution.id.toString() ===
+                          previous.solution_id &&
+                        solution.opportunity_id.toString() === value,
+                    )
+                      ? previous.solution_id
+                      : "",
+                }))
+              }
+            />
 
             {/* Solution */}
 
-            <div className="space-y-2">
-              <Label htmlFor="solution_id">
-                Presales Solution
-              </Label>
+            <SearchableRequestLink
+              key={`solution-${form.opportunity_id}-${form.solution_id}`}
+              id="solution_search"
+              label="Presales Solution"
+              placeholder="Search by solution, opportunity, technology, or delivery..."
+              emptyMessage="No solutions match your search."
+              options={solutionOptions}
+              value={form.solution_id}
+              onChange={(value) => {
+                const solution = solutions.find(
+                  (record) => record.id.toString() === value,
+                );
 
-              <select
-                id="solution_id"
-                name="solution_id"
-                value={
-                  form.solution_id
-                }
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm"
-              >
-                <option value="">
-                  No solution
-                </option>
-
-                {solutions.map(
-                  (solution) => (
-                    <option
-                      key={
-                        solution.id
-                      }
-                      value={
-                        solution.id
-                      }
-                    >
-                      #
-                      {
-                        solution.id
-                      }{" "}
-                      -{" "}
-                      {
-                        solution.solution_name
-                      }
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+                setForm((previous) => ({
+                  ...previous,
+                  solution_id: value,
+                  opportunity_id: solution
+                    ? solution.opportunity_id.toString()
+                    : previous.opportunity_id,
+                }));
+              }}
+            />
 
             {/* Role */}
 
@@ -1162,9 +1288,6 @@ function ResourceRequestDetailsModal({
 /* ================================================= */
 
 export default function ResourceManagerResourceRequestsPage() {
-  const confirm = useConfirm();
-  const { user } = useAuth();
-
   const [
     requests,
     setRequests,
@@ -1208,24 +1331,8 @@ export default function ResourceManagerResourceRequestsPage() {
   const [isLoading, setIsLoading] =
     useState(true);
 
-  const [isSaving, setIsSaving] =
-    useState(false);
-
   const [error, setError] =
     useState("");
-
-  const [formError, setFormError] =
-    useState("");
-
-  const [showForm, setShowForm] =
-    useState(false);
-
-  const [
-    editingRequest,
-    setEditingRequest,
-  ] = useState<
-    ResourceRequest | null
-  >(null);
 
   const [
     viewingRequest,
@@ -1465,100 +1572,11 @@ export default function ResourceManagerResourceRequestsPage() {
         0,
       );
 
-  /* ---------------- SAVE ---------------- */
-
-  async function handleSaveRequest(
-    payload: CreateResourceRequestRequest,
-  ): Promise<void> {
-    setIsSaving(true);
-    setFormError("");
-
-    try {
-      if (editingRequest) {
-        const updated =
-          await replaceResourceRequest(
-            editingRequest.id,
-            payload,
-          );
-
-        setRequests(
-          (current) =>
-            current.map(
-              (request) =>
-                request.id ===
-                updated.id
-                  ? updated
-                  : request,
-            ),
-        );
-      } else {
-        const created =
-          await createResourceRequest(
-            payload,
-          );
-
-        setRequests(
-          (current) => [
-            created,
-            ...current,
-          ],
-        );
-      }
-
-      setShowForm(false);
-      setEditingRequest(null);
-    } catch (requestError) {
-      setFormError(
-        getErrorMessage(
-          requestError,
-        ),
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  /* ---------------- DELETE ---------------- */
-
-  async function handleDeleteRequest(
-    request: ResourceRequest,
-  ): Promise<void> {
-    const confirmed =
-      await confirm(
-        `Delete resource request "${request.requested_role}"?`,
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteResourceRequest(
-        request.id,
-      );
-
-      setRequests(
-        (current) =>
-          current.filter(
-            (record) =>
-              record.id !==
-              request.id,
-          ),
-      );
-    } catch (requestError) {
-      setError(
-        getErrorMessage(
-          requestError,
-        ),
-      );
-    }
-  }
-
   return (
     <ProtectedRoute allowedRole="RESOURCE_MANAGER">
       <DashboardLayout
         title="Resource Requests"
-        description="Review and manage workforce demand from Sales and Presales."
+        description="Review workforce demand generated from Presales resource requirements."
       >
         <div className="space-y-6">
           {/* KPI */}
@@ -1646,28 +1664,6 @@ export default function ResourceManagerResourceRequestsPage() {
                     Refresh
                   </Button>
 
-                  <Button
-                    type="button"
-                    className="bg-blue-700 hover:bg-blue-800"
-                    disabled={!user}
-                    onClick={() => {
-                      setEditingRequest(
-                        null,
-                      );
-
-                      setFormError(
-                        "",
-                      );
-
-                      setShowForm(
-                        true,
-                      );
-                    }}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-
-                    Create Request
-                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -2019,42 +2015,6 @@ export default function ResourceManagerResourceRequestsPage() {
                                     <Eye className="h-4 w-4" />
                                   </Button>
 
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="outline"
-                                    title="Edit request"
-                                    onClick={() => {
-                                      setEditingRequest(
-                                        request,
-                                      );
-
-                                      setFormError(
-                                        "",
-                                      );
-
-                                      setShowForm(
-                                        true,
-                                      );
-                                    }}
-                                  >
-                                    <Edit3 className="h-4 w-4" />
-                                  </Button>
-
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="outline"
-                                    title="Delete request"
-                                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                                    onClick={() =>
-                                      void handleDeleteRequest(
-                                        request,
-                                      )
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -2068,46 +2028,6 @@ export default function ResourceManagerResourceRequestsPage() {
             </CardContent>
           </Card>
         </div>
-
-        {showForm && user && (
-          <ResourceRequestFormModal
-            request={
-              editingRequest
-            }
-            opportunities={
-              opportunities
-            }
-            solutions={
-              solutions
-            }
-            currentUserId={
-              user.id
-            }
-            currentUserName={
-              user.full_name
-            }
-            isSaving={
-              isSaving
-            }
-            error={formError}
-            onClose={() => {
-              if (
-                !isSaving
-              ) {
-                setShowForm(
-                  false,
-                );
-
-                setEditingRequest(
-                  null,
-                );
-              }
-            }}
-            onSubmit={
-              handleSaveRequest
-            }
-          />
-        )}
 
         {viewingRequest && (
           <ResourceRequestDetailsModal

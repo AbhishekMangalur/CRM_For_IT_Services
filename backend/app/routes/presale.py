@@ -324,11 +324,6 @@ def delete_estimation_api(
     response_model=ResourceRequirementResponse,
     status_code=status.HTTP_201_CREATED,
 )
-@router.post(
-    "/resource-requirements",
-    response_model=ResourceRequirementResponse,
-    status_code=status.HTTP_201_CREATED,
-)
 def create_resource_requirement_api(
     payload: ResourceRequirementCreate,
     db: Session = Depends(get_db),

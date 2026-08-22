@@ -84,6 +84,108 @@ interface OpportunityFormState {
   notes: string;
 }
 
+interface AccountComboboxProps {
+  accounts: AccountDirectorAccount[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function AccountCombobox({
+  accounts,
+  value,
+  onChange,
+}: AccountComboboxProps) {
+  const selectedAccount = accounts.find(
+    (account) => account.id.toString() === value,
+  );
+  const [query, setQuery] = useState(
+    selectedAccount?.account_name ?? "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredAccounts = accounts.filter(
+    (account) =>
+      !normalizedQuery ||
+      [
+        account.account_name,
+        account.industry,
+        account.primary_contact_name,
+        account.primary_contact_email ?? "",
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="expansion_account_search">
+        Account *
+      </Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id="expansion_account_search"
+          type="search"
+          autoComplete="off"
+          required
+          value={query}
+          placeholder="Search by account, industry, or contact..."
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls="expansion-account-options"
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id="expansion-account-options"
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {filteredAccounts.length > 0 ? (
+              filteredAccounts.map((account) => (
+                <button
+                  key={account.id}
+                  type="button"
+                  role="option"
+                  aria-selected={value === account.id.toString()}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(account.account_name);
+                    onChange(account.id.toString());
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {account.account_name}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {account.industry} · {account.primary_contact_name}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                No accounts match your search.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const EMPTY_FORM: OpportunityFormState = {
   account_id: "",
   opportunity_name: "",
@@ -340,34 +442,16 @@ function OpportunityFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="account_id">
-                Account *
-              </Label>
-
-              <select
-                id="account_id"
-                name="account_id"
-                value={form.account_id}
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-                required
-              >
-                <option value="">
-                  Select an account
-                </option>
-
-                {accounts.map((account) => (
-                  <option
-                    key={account.id}
-                    value={account.id}
-                  >
-                    #{account.id} -{" "}
-                    {account.account_name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <AccountCombobox
+              accounts={accounts}
+              value={form.account_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  account_id: value,
+                }))
+              }
+            />
 
             <div className="space-y-2">
               <Label htmlFor="opportunity_name">

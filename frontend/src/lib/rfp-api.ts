@@ -4,16 +4,12 @@ import type {
   BidDecision,
   BidEvaluation,
   CreateBidEvaluationRequest,
-  CreateRfpAssignmentRequest,
   CreateRfpRequest,
   PatchBidEvaluationRequest,
-  PatchRfpAssignmentRequest,
   PatchRfpRequest,
   Rfp,
-  RfpAssignment,
   RfpStatus,
   UpdateBidEvaluationRequest,
-  UpdateRfpAssignmentRequest,
   UpdateRfpRequest,
 } from "@/types/rfp";
 
@@ -29,8 +25,6 @@ export const RFP_ENDPOINTS = {
   EVALUATIONS:
     "/api/rfp/bid-evaluations",
 
-  ASSIGNMENTS:
-    "/api/rfp/assignments",
 } as const;
 
 
@@ -246,119 +240,16 @@ export async function deleteBidEvaluation(
 
 
 /* ================================================= */
-/* ASSIGNMENTS */
-/* ================================================= */
-
-export async function getRfpAssignments(
-  params: ListQueryParams = {},
-): Promise<RfpAssignment[]> {
-  const response =
-    await api.get<RfpAssignment[]>(
-      RFP_ENDPOINTS.ASSIGNMENTS,
-      {
-        params: {
-          skip: params.skip ?? 0,
-          limit: params.limit ?? 100,
-        },
-      },
-    );
-
-  return response.data;
-}
-
-export async function getRfpAssignmentById(
-  assignmentId: number,
-): Promise<RfpAssignment> {
-  const response =
-    await api.get<RfpAssignment>(
-      `${RFP_ENDPOINTS.ASSIGNMENTS}/${assignmentId}`,
-    );
-
-  return response.data;
-}
-
-export async function getAssignmentsByRfp(
-  rfpId: number,
-): Promise<RfpAssignment[]> {
-  const response =
-    await api.get<RfpAssignment[]>(
-      `${RFP_ENDPOINTS.RFPS}/${rfpId}/assignments`,
-    );
-
-  return response.data;
-}
-
-export async function getAssignmentsByUser(
-  userId: number,
-): Promise<RfpAssignment[]> {
-  const response =
-    await api.get<RfpAssignment[]>(
-      `/api/rfp/users/${userId}/assignments`,
-    );
-
-  return response.data;
-}
-
-export async function createRfpAssignment(
-  payload: CreateRfpAssignmentRequest,
-): Promise<RfpAssignment> {
-  const response =
-    await api.post<RfpAssignment>(
-      RFP_ENDPOINTS.ASSIGNMENTS,
-      payload,
-    );
-
-  return response.data;
-}
-
-export async function replaceRfpAssignment(
-  assignmentId: number,
-  payload: UpdateRfpAssignmentRequest,
-): Promise<RfpAssignment> {
-  const response =
-    await api.put<RfpAssignment>(
-      `${RFP_ENDPOINTS.ASSIGNMENTS}/${assignmentId}`,
-      payload,
-    );
-
-  return response.data;
-}
-
-export async function patchRfpAssignment(
-  assignmentId: number,
-  payload: PatchRfpAssignmentRequest,
-): Promise<RfpAssignment> {
-  const response =
-    await api.patch<RfpAssignment>(
-      `${RFP_ENDPOINTS.ASSIGNMENTS}/${assignmentId}`,
-      payload,
-    );
-
-  return response.data;
-}
-
-export async function deleteRfpAssignment(
-  assignmentId: number,
-): Promise<void> {
-  await api.delete(
-    `${RFP_ENDPOINTS.ASSIGNMENTS}/${assignmentId}`,
-  );
-}
-
-
-/* ================================================= */
 /* DASHBOARD */
 /* ================================================= */
 
 export async function getRfpDashboardResources(): Promise<{
   rfps: Rfp[];
   evaluations: BidEvaluation[];
-  assignments: RfpAssignment[];
 }> {
   const [
     rfps,
     evaluations,
-    assignments,
   ] = await Promise.all([
     getRfps({
       skip: 0,
@@ -370,15 +261,10 @@ export async function getRfpDashboardResources(): Promise<{
       limit: 100,
     }),
 
-    getRfpAssignments({
-      skip: 0,
-      limit: 100,
-    }),
   ]);
 
   return {
     rfps,
     evaluations,
-    assignments,
   };
 }

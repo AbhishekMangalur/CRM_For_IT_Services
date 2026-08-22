@@ -11,7 +11,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
-    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -158,13 +157,6 @@ class RFP(Base):
         cascade="all, delete-orphan",
     )
 
-    assignments: Mapped[list["RFPAssignment"]] = relationship(
-        "RFPAssignment",
-        back_populates="rfp",
-        cascade="all, delete-orphan",
-    )
-
-
 class BidEvaluation(Base):
     __tablename__ = "bid_evaluations"
 
@@ -261,80 +253,4 @@ class BidEvaluation(Base):
     evaluator: Mapped["User"] = relationship(
         "User",
         foreign_keys=[evaluated_by],
-    )
-
-
-class RFPAssignment(Base):
-    __tablename__ = "rfp_assignments"
-
-    __table_args__ = (
-        UniqueConstraint(
-            "rfp_id",
-            "user_id",
-            name="uq_rfp_assignment_user",
-        ),
-    )
-
-    id: Mapped[int] = mapped_column(
-        Integer,
-        primary_key=True,
-        index=True,
-    )
-
-    rfp_id: Mapped[int] = mapped_column(
-        ForeignKey(
-            "rfps.id",
-            ondelete="CASCADE",
-        ),
-        nullable=False,
-        index=True,
-    )
-
-    user_id: Mapped[int] = mapped_column(
-        ForeignKey(
-            "users.id",
-            ondelete="CASCADE",
-        ),
-        nullable=False,
-        index=True,
-    )
-
-    assignment_role: Mapped[str] = mapped_column(
-        String(50),
-        nullable=False,
-        index=True,
-    )
-
-    assignment_status: Mapped[str] = mapped_column(
-        String(30),
-        nullable=False,
-        default="ASSIGNED",
-        server_default="ASSIGNED",
-        index=True,
-    )
-
-    due_date: Mapped[date | None] = mapped_column(
-        Date,
-        nullable=True,
-    )
-
-    notes: Mapped[str | None] = mapped_column(
-        Text,
-        nullable=True,
-    )
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-    )
-
-    rfp: Mapped["RFP"] = relationship(
-        "RFP",
-        back_populates="assignments",
-    )
-
-    user: Mapped["User"] = relationship(
-        "User",
-        foreign_keys=[user_id],
     )

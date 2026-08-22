@@ -94,6 +94,127 @@ interface ActivityFormState {
   status: ActivityStatus;
 }
 
+interface ActivityLinkOption {
+  value: string;
+  label: string;
+  description: string;
+  searchText: string;
+}
+
+interface ActivityLinkComboboxProps {
+  id: string;
+  label: string;
+  placeholder: string;
+  emptyMessage: string;
+  options: ActivityLinkOption[];
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function ActivityLinkCombobox({
+  id,
+  label,
+  placeholder,
+  emptyMessage,
+  options,
+  value,
+  onChange,
+}: ActivityLinkComboboxProps) {
+  const selectedOption = options.find(
+    (option) => option.value === value,
+  );
+  const [query, setQuery] = useState(
+    selectedOption?.label ?? "",
+  );
+  const [isOpen, setIsOpen] = useState(false);
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOptions = options.filter(
+    (option) =>
+      !normalizedQuery ||
+      option.searchText.includes(normalizedQuery),
+  );
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Input
+          id={id}
+          type="search"
+          autoComplete="off"
+          value={query}
+          placeholder={placeholder}
+          className="pl-10"
+          role="combobox"
+          aria-expanded={isOpen}
+          aria-controls={`${id}-options`}
+          onFocus={() => setIsOpen(true)}
+          onBlur={() => setIsOpen(false)}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            onChange("");
+            setIsOpen(true);
+          }}
+        />
+
+        {isOpen && (
+          <div
+            id={`${id}-options`}
+            role="listbox"
+            className="absolute z-20 mt-1 max-h-52 w-full overflow-y-auto rounded-md border border-blue-100 bg-white p-1 shadow-lg"
+          >
+            {value && (
+              <button
+                type="button"
+                className="block w-full rounded px-3 py-2 text-left text-sm text-slate-500 hover:bg-blue-50"
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  setQuery("");
+                  onChange("");
+                  setIsOpen(false);
+                }}
+              >
+                Clear selection
+              </button>
+            )}
+
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={value === option.value}
+                  className="block w-full rounded px-3 py-2 text-left hover:bg-blue-50"
+                  onMouseDown={(event) => {
+                    event.preventDefault();
+                    setQuery(option.label);
+                    onChange(option.value);
+                    setIsOpen(false);
+                  }}
+                >
+                  <span className="block text-sm font-medium text-slate-700">
+                    {option.label}
+                  </span>
+                  <span className="block text-xs text-slate-500">
+                    {option.description}
+                  </span>
+                </button>
+              ))
+            ) : (
+              <p className="px-3 py-2 text-xs text-slate-500">
+                {emptyMessage}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const EMPTY_FORM: ActivityFormState = {
   lead_id: "",
   opportunity_id: "",
@@ -294,6 +415,38 @@ function ActivityFormModal({
         : EMPTY_FORM,
     );
 
+  const leadOptions = leads.map((lead) => ({
+    value: lead.id.toString(),
+    label: lead.company_name,
+    description: [lead.contact_name, lead.contact_email]
+      .filter(Boolean)
+      .join(" · "),
+    searchText: [
+      lead.company_name,
+      lead.contact_name,
+      lead.contact_email ?? "",
+    ]
+      .join(" ")
+      .toLowerCase(),
+  }));
+  const opportunityOptions = opportunities.map(
+    (opportunity) => ({
+      value: opportunity.id.toString(),
+      label: opportunity.opportunity_name,
+      description: [
+        opportunity.client_name,
+        opportunity.service_type,
+      ].join(" · "),
+      searchText: [
+        opportunity.opportunity_name,
+        opportunity.client_name,
+        opportunity.service_type,
+      ]
+        .join(" ")
+        .toLowerCase(),
+    }),
+  );
+
   function handleChange(
     event:
       | ChangeEvent<HTMLInputElement>
@@ -374,64 +527,35 @@ function ActivityFormModal({
               </Alert>
             )}
 
-            <div className="space-y-2">
-              <Label htmlFor="lead_id">
-                Linked lead
-              </Label>
+            <ActivityLinkCombobox
+              id="lead_search"
+              label="Linked lead"
+              placeholder="Search by company, contact, or email..."
+              emptyMessage="No leads match your search."
+              options={leadOptions}
+              value={form.lead_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  lead_id: value,
+                }))
+              }
+            />
 
-              <select
-                id="lead_id"
-                name="lead_id"
-                value={form.lead_id}
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-              >
-                <option value="">
-                  No lead selected
-                </option>
-
-                {leads.map((lead) => (
-                  <option
-                    key={lead.id}
-                    value={lead.id}
-                  >
-                    #{lead.id} - {lead.company_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="opportunity_id">
-                Linked opportunity
-              </Label>
-
-              <select
-                id="opportunity_id"
-                name="opportunity_id"
-                value={form.opportunity_id}
-                onChange={handleChange}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-600/20"
-              >
-                <option value="">
-                  No opportunity selected
-                </option>
-
-                {opportunities.map(
-                  (opportunity) => (
-                    <option
-                      key={opportunity.id}
-                      value={opportunity.id}
-                    >
-                      #{opportunity.id} -{" "}
-                      {
-                        opportunity.opportunity_name
-                      }
-                    </option>
-                  ),
-                )}
-              </select>
-            </div>
+            <ActivityLinkCombobox
+              id="opportunity_search"
+              label="Linked opportunity"
+              placeholder="Search by opportunity, client, or service..."
+              emptyMessage="No opportunities match your search."
+              options={opportunityOptions}
+              value={form.opportunity_id}
+              onChange={(value) =>
+                setForm((previous) => ({
+                  ...previous,
+                  opportunity_id: value,
+                }))
+              }
+            />
 
             {!form.lead_id &&
               !form.opportunity_id && (

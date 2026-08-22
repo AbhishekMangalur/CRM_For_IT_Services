@@ -8,7 +8,6 @@ from sqlalchemy.orm import Session
 from app.models.rfp import (
     BidEvaluation,
     RFP,
-    RFPAssignment,
 )
 from app.models.sale import Opportunity
 from app.models.user import User
@@ -16,9 +15,6 @@ from app.repositories.rfp_repository import (
     create_record,
     delete_record,
     get_all_records,
-    get_assignment_for_user,
-    get_assignments_by_rfp,
-    get_assignments_by_user,
     get_evaluations_by_rfp,
     get_latest_evaluation_for_rfp,
     get_record_by_id,
@@ -57,7 +53,6 @@ def require_user(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with ID {user_id} was not found",
         )
-
     if not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,10 +112,6 @@ def normalize_rfp_data(
 
 
 COMPLETED_RFP_STATUSES = {"SUBMITTED", "WON", "LOST"}
-FINAL_RFP_OUTCOME_STATUSES = {"WON", "LOST"}
-FINAL_ASSIGNMENT_STATUSES = {"COMPLETED", "CANCELLED"}
-
-
 def apply_rfp_completion_timestamp(
     data: dict[str, Any],
     existing_rfp: RFP | None = None,
@@ -137,21 +128,6 @@ def apply_rfp_completion_timestamp(
         data["completed_at"] = None
 
     return data
-
-
-def complete_rfp_assignments_for_final_outcome(
-    db: Session,
-    rfp: RFP,
-    data: dict[str, Any],
-) -> None:
-    next_status = data.get("rfp_status", rfp.rfp_status)
-
-    if next_status not in FINAL_RFP_OUTCOME_STATUSES:
-        return
-
-    for assignment in get_assignments_by_rfp(db, rfp.id):
-        if assignment.assignment_status not in FINAL_ASSIGNMENT_STATUSES:
-            assignment.assignment_status = "COMPLETED"
 
 
 def validate_rfp(
@@ -346,8 +322,6 @@ def update_rfp(
         data,
         existing_rfp=rfp,
     )
-
-    complete_rfp_assignments_for_final_outcome(db, rfp, data)
 
     try:
         return update_record(
@@ -698,258 +672,6 @@ def delete_bid_evaluation(
         delete_record(
             db,
             evaluation,
-        )
-    except IntegrityError as error:
-        handle_integrity_error(
-            db,
-            error,
-        )
-
-
-# =========================================================
-# RFP Assignment
-# =========================================================
-
-
-def require_rfp_assignment(
-    db: Session,
-    assignment_id: int,
-) -> RFPAssignment:
-    assignment = get_record_by_id(
-        db,
-        RFPAssignment,
-        assignment_id,
-    )
-
-    if not assignment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="RFP assignment not found",
-        )
-
-    return assignment
-
-
-def validate_rfp_assignment(
-    db: Session,
-    data: dict[str, Any],
-    existing_assignment: RFPAssignment | None = None,
-) -> None:
-    rfp_id = data.get(
-        "rfp_id",
-        existing_assignment.rfp_id
-        if existing_assignment
-        else None,
-    )
-
-    user_id = data.get(
-        "user_id",
-        existing_assignment.user_id
-        if existing_assignment
-        else None,
-    )
-
-    if rfp_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="rfp_id is required",
-        )
-
-    rfp = require_rfp(
-        db,
-        rfp_id,
-    )
-
-    if rfp.bid_decision != "BID":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Users can only be assigned after "
-                "the RFP decision is BID"
-            ),
-        )
-
-    if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="user_id is required",
-        )
-
-    require_user(
-        db,
-        user_id,
-    )
-
-    duplicate = get_assignment_for_user(
-        db,
-        rfp_id,
-        user_id,
-    )
-
-    if (
-        duplicate
-        and (
-            existing_assignment is None
-            or duplicate.id != existing_assignment.id
-        )
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User is already assigned to this RFP",
-        )
-
-    due_date = data.get(
-        "due_date",
-        existing_assignment.due_date
-        if existing_assignment
-        else None,
-    )
-
-    if (
-        due_date is not None
-        and due_date > rfp.submission_deadline
-    ):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "Assignment due date cannot be after "
-                "the RFP submission deadline"
-            ),
-        )
-
-
-def create_rfp_assignment(
-    db: Session,
-    data: dict[str, Any],
-) -> RFPAssignment:
-    validate_rfp_assignment(
-        db,
-        data,
-    )
-
-    try:
-        assignment = create_record(
-            db,
-            RFPAssignment,
-            data,
-        )
-
-        rfp = require_rfp(
-            db,
-            assignment.rfp_id,
-        )
-
-        if rfp.rfp_status in {
-            "RECEIVED",
-            "EVALUATED",
-        }:
-            rfp.rfp_status = "IN_PROGRESS"
-            db.commit()
-
-        return assignment
-
-    except IntegrityError as error:
-        handle_integrity_error(
-            db,
-            error,
-        )
-
-
-def get_rfp_assignments(
-    db: Session,
-    skip: int = 0,
-    limit: int = 100,
-) -> list[RFPAssignment]:
-    return get_all_records(
-        db,
-        RFPAssignment,
-        skip,
-        limit,
-    )
-
-
-def get_rfp_assignment(
-    db: Session,
-    assignment_id: int,
-) -> RFPAssignment:
-    return require_rfp_assignment(
-        db,
-        assignment_id,
-    )
-
-
-def get_assignments_for_rfp(
-    db: Session,
-    rfp_id: int,
-) -> list[RFPAssignment]:
-    require_rfp(
-        db,
-        rfp_id,
-    )
-
-    return get_assignments_by_rfp(
-        db,
-        rfp_id,
-    )
-
-
-def get_assignments_for_user(
-    db: Session,
-    user_id: int,
-) -> list[RFPAssignment]:
-    require_user(
-        db,
-        user_id,
-    )
-
-    return get_assignments_by_user(
-        db,
-        user_id,
-    )
-
-
-def update_rfp_assignment(
-    db: Session,
-    assignment_id: int,
-    data: dict[str, Any],
-) -> RFPAssignment:
-    assignment = require_rfp_assignment(
-        db,
-        assignment_id,
-    )
-
-    validate_rfp_assignment(
-        db,
-        data,
-        existing_assignment=assignment,
-    )
-
-    try:
-        return update_record(
-            db,
-            assignment,
-            data,
-        )
-    except IntegrityError as error:
-        handle_integrity_error(
-            db,
-            error,
-        )
-
-
-def delete_rfp_assignment(
-    db: Session,
-    assignment_id: int,
-) -> None:
-    assignment = require_rfp_assignment(
-        db,
-        assignment_id,
-    )
-
-    try:
-        delete_record(
-            db,
-            assignment,
         )
     except IntegrityError as error:
         handle_integrity_error(

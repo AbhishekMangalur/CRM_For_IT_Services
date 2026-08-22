@@ -1,7 +1,5 @@
 "use client";
 
-import { useConfirm } from "@/providers/ConfirmProvider";
-
 import {
   ChangeEvent,
   FormEvent,
@@ -12,19 +10,15 @@ import {
   useState,
 } from "react";
 import axios from "axios";
-import { useSearchParams } from "next/navigation";
 import {
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
-  Edit3,
   Eye,
   Layers3,
   Loader2,
-  Plus,
   RefreshCcw,
   Search,
-  Trash2,
   UserRoundCheck,
   Users,
   X,
@@ -46,16 +40,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
-import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 
 import {
-  createResourceAllocation,
-  deleteResourceAllocation,
   getEmployees,
   getResourceAllocations,
   getResourceRequests,
-  replaceResourceAllocation,
 } from "@/lib/resource-manager-api";
 
 import { getSalesOpportunities } from "@/lib/sales-api";
@@ -329,6 +319,9 @@ interface AllocationFormModalProps {
     resource_request_id?: string;
     opportunity_id?: string;
     solution_id?: string;
+    start_date?: string;
+    end_date?: string;
+    allocation_percentage?: string;
   };
   onClose: () => void;
   onSubmit: (
@@ -336,6 +329,8 @@ interface AllocationFormModalProps {
   ) => Promise<void>;
 }
 
+// The allocation form is intentionally unreachable from this read-only page.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AllocationFormModal({
   allocation,
   employees,
@@ -373,6 +368,15 @@ function AllocationFormModal({
 
         solution_id:
           prefill?.solution_id ?? "",
+
+        start_date:
+          prefill?.start_date ?? "",
+
+        end_date:
+          prefill?.end_date ?? "",
+
+        allocation_percentage:
+          prefill?.allocation_percentage ?? "",
       };
     });
 
@@ -396,13 +400,24 @@ function AllocationFormModal({
     new Date(form.end_date).getTime() <
       new Date(form.start_date).getTime();
 
+  const selectedEmployee = employees.find(
+    (employee) =>
+      employee.id.toString() === form.employee_id,
+  );
+
+  const startsBeforeEmployeeAvailability =
+    Boolean(form.start_date) &&
+    Boolean(selectedEmployee?.available_from) &&
+    form.start_date < selectedEmployee!.available_from!;
+
   const isInvalid =
     !form.employee_id ||
     !form.start_date ||
     !form.allocation_percentage ||
     Number(form.allocation_percentage) <= 0 ||
     Number(form.allocation_percentage) > 100 ||
-    invalidDateRange;
+    invalidDateRange ||
+    startsBeforeEmployeeAvailability;
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -428,8 +443,8 @@ function AllocationFormModal({
           <div>
             <h2 className="text-xl font-bold text-slate-900">
               {allocation
-                ? "Edit Resource Allocation"
-                : "Allocate Employee"}
+                ? "Resource Allocation"
+                : "Allocation Form"}
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
@@ -473,6 +488,21 @@ function AllocationFormModal({
               </Alert>
             )}
 
+            {startsBeforeEmployeeAvailability && (
+              <Alert
+                variant="destructive"
+                className="md:col-span-2"
+              >
+                <AlertDescription>
+                  {selectedEmployee?.employee_code} is available from{" "}
+                  {formatDate(
+                    selectedEmployee?.available_from ?? null,
+                  )}
+                  . Choose that date or a later start date.
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Employee */}
 
             <div className="space-y-2 md:col-span-2">
@@ -508,6 +538,9 @@ function AllocationFormModal({
                       {formatLabel(
                         employee.availability_status,
                       )}
+                      {employee.available_from
+                        ? ` - Available ${formatDate(employee.available_from)}`
+                        : ""}
                     </option>
                   ))}
               </select>
@@ -693,6 +726,10 @@ function AllocationFormModal({
                 name="start_date"
                 type="date"
                 value={form.start_date}
+                min={
+                  selectedEmployee?.available_from ??
+                  undefined
+                }
                 onChange={handleChange}
                 required
               />
@@ -1041,23 +1078,6 @@ function AllocationDetailsModal({
 /* ================================================= */
 
 function ResourceManagerAllocationsContent() {
-  const confirm = useConfirm();
-  const searchParams = useSearchParams();
-
-  const prefilledEmployeeId =
-    searchParams.get("employee_id");
-
-  const prefilledRequestId =
-    searchParams.get("resource_request_id");
-
-  const prefilledOpportunityId =
-    searchParams.get("opportunity_id");
-
-  const prefilledSolutionId =
-    searchParams.get("solution_id");
-
-  const { user } = useAuth();
-
   const [
     allocations,
     setAllocations,
@@ -1107,29 +1127,8 @@ function ResourceManagerAllocationsContent() {
   const [isLoading, setIsLoading] =
     useState(true);
 
-  const [isSaving, setIsSaving] =
-    useState(false);
-
   const [error, setError] =
     useState("");
-
-  const [
-    formError,
-    setFormError,
-  ] = useState("");
-
-  const [
-    showForm,
-    setShowForm,
-  ] = useState(false);
-
-  const [
-    editingAllocation,
-    setEditingAllocation,
-  ] =
-    useState<ResourceAllocation | null>(
-      null,
-    );
 
   const [
     viewingAllocation,
@@ -1222,23 +1221,6 @@ function ResourceManagerAllocationsContent() {
 
     return () => window.clearTimeout(timeoutId);
   }, [loadData]);
-
-  useEffect(() => {
-    if (
-      prefilledEmployeeId &&
-      prefilledRequestId
-    ) {
-      const timeoutId = window.setTimeout(() => {
-        setEditingAllocation(null);
-        setShowForm(true);
-      }, 0);
-
-      return () => window.clearTimeout(timeoutId);
-    }
-  }, [
-    prefilledEmployeeId,
-    prefilledRequestId,
-  ]);
 
   /* ---------------- LOOKUPS ---------------- */
 
@@ -1439,107 +1421,11 @@ function ResourceManagerAllocationsContent() {
         ),
     ).size;
 
-  /* ---------------- SAVE ---------------- */
-
-  async function handleSaveAllocation(
-    payload: CreateResourceAllocationRequest,
-  ): Promise<void> {
-    setIsSaving(true);
-    setFormError("");
-
-    try {
-      if (editingAllocation) {
-        await replaceResourceAllocation(
-          editingAllocation.id,
-          payload,
-        );
-      } else {
-        await createResourceAllocation(
-          payload,
-        );
-      }
-
-      setShowForm(false);
-      setEditingAllocation(null);
-
-      // Important:
-      // backend may have updated employee utilization,
-      // availability, and resource request status.
-      await loadData();
-    } catch (requestError) {
-      setFormError(
-        getErrorMessage(
-          requestError,
-        ),
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  /* ---------------- DELETE ---------------- */
-
-  async function handleDeleteAllocation(
-    allocation: ResourceAllocation,
-  ): Promise<void> {
-    const employee =
-      findEmployee(
-        allocation.employee_id,
-      );
-
-    const confirmed =
-      await confirm(
-        `Delete allocation for "${
-          employee?.full_name ??
-          `Employee #${allocation.employee_id}`
-        }"?`,
-      );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      await deleteResourceAllocation(
-        allocation.id,
-      );
-
-      // Refresh instead of only removing locally
-      // because backend state may also change.
-      await loadData();
-    } catch (requestError) {
-      setError(
-        getErrorMessage(
-          requestError,
-        ),
-      );
-    }
-  }
-
-  /* ---------------- OPEN MODALS ---------------- */
-
-  function openCreateForm(): void {
-    setEditingAllocation(null);
-    setFormError("");
-    setShowForm(true);
-  }
-
-  function openEditForm(
-    allocation: ResourceAllocation,
-  ): void {
-    setEditingAllocation(
-      allocation,
-    );
-
-    setFormError("");
-    setShowForm(true);
-  }
-
   return (
     <ProtectedRoute allowedRole="RESOURCE_MANAGER">
       <DashboardLayout
         title="Resource Allocations"
-        description="Allocate employees to opportunities, solutions and approved resource demand."
+        description="Review employee allocations across opportunities, solutions, and approved resource demand."
       >
         <div className="space-y-6">
           {/* KPI */}
@@ -1625,19 +1511,6 @@ function ResourceManagerAllocationsContent() {
                     Refresh
                   </Button>
 
-                  <Button
-                    type="button"
-                    className="bg-blue-700 hover:bg-blue-800"
-                    onClick={openCreateForm}
-                    disabled={
-                      !user ||
-                      employees.length === 0
-                    }
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-
-                    Allocate Employee
-                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -2003,34 +1876,6 @@ function ResourceManagerAllocationsContent() {
                                     <Eye className="h-4 w-4" />
                                   </Button>
 
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="outline"
-                                    title="Edit allocation"
-                                    onClick={() =>
-                                      openEditForm(
-                                        allocation,
-                                      )
-                                    }
-                                  >
-                                    <Edit3 className="h-4 w-4" />
-                                  </Button>
-
-                                  <Button
-                                    type="button"
-                                    size="icon"
-                                    variant="outline"
-                                    title="Delete allocation"
-                                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
-                                    onClick={() =>
-                                      void handleDeleteAllocation(
-                                        allocation,
-                                      )
-                                    }
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
                                 </div>
                               </td>
                             </tr>
@@ -2044,54 +1889,6 @@ function ResourceManagerAllocationsContent() {
             </CardContent>
           </Card>
         </div>
-
-        {showForm && user && (
-          <AllocationFormModal
-            allocation={
-              editingAllocation
-            }
-            employees={employees}
-            opportunities={
-              opportunities
-            }
-            solutions={solutions}
-            resourceRequests={
-              resourceRequests
-            }
-            currentUserId={user.id}
-            currentUserName={user.full_name}
-            isSaving={isSaving}
-            error={formError}
-            prefill={{
-              employee_id:
-                prefilledEmployeeId ??
-                undefined,
-
-              resource_request_id:
-                prefilledRequestId ??
-                undefined,
-
-              opportunity_id:
-                prefilledOpportunityId ??
-                undefined,
-
-              solution_id:
-                prefilledSolutionId ??
-                undefined,
-            }}
-            onClose={() => {
-              if (!isSaving) {
-                setShowForm(false);
-                setEditingAllocation(
-                  null,
-                );
-              }
-            }}
-            onSubmit={
-              handleSaveAllocation
-            }
-          />
-        )}
 
         {viewingAllocation && (
           <AllocationDetailsModal

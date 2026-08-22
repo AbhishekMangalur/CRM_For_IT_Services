@@ -14,10 +14,6 @@ from app.schemas.rfp import (
     BidEvaluationPatch,
     BidEvaluationPut,
     BidEvaluationResponse,
-    RFPAssignmentCreate,
-    RFPAssignmentPatch,
-    RFPAssignmentPut,
-    RFPAssignmentResponse,
     RFPCreate,
     RFPPatch,
     RFPPut,
@@ -26,25 +22,18 @@ from app.schemas.rfp import (
 from app.services.rfp_service import (
     create_bid_evaluation,
     create_rfp,
-    create_rfp_assignment,
     delete_bid_evaluation,
     delete_rfp,
-    delete_rfp_assignment,
-    get_assignments_for_rfp,
-    get_assignments_for_user,
     get_bid_evaluation,
     get_bid_evaluations,
     get_latest_rfp_evaluation,
     get_rfp,
-    get_rfp_assignment,
-    get_rfp_assignments,
     get_rfp_evaluations,
     get_rfps,
     get_rfps_for_bid_decision,
     get_rfps_for_status,
     update_bid_evaluation,
     update_rfp,
-    update_rfp_assignment,
 )
 
 
@@ -73,7 +62,6 @@ def create_rfp_api(
         db,
         payload.model_dump(),
     )
-
 
 @router.get(
     "/rfps",
@@ -304,134 +292,6 @@ def delete_bid_evaluation_api(
     delete_bid_evaluation(
         db,
         evaluation_id,
-    )
-
-    return Response(
-        status_code=status.HTTP_204_NO_CONTENT,
-    )
-
-
-# =========================================================
-# RFP Assignment routes
-# =========================================================
-
-
-@router.post(
-    "/assignments",
-    response_model=RFPAssignmentResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-def create_rfp_assignment_api(
-    payload: RFPAssignmentCreate,
-    db: Session = Depends(get_db),
-):
-    return create_rfp_assignment(
-        db,
-        payload.model_dump(),
-    )
-
-
-@router.get(
-    "/assignments",
-    response_model=list[RFPAssignmentResponse],
-)
-def get_rfp_assignments_api(
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=100, ge=1, le=500),
-    db: Session = Depends(get_db),
-):
-    return get_rfp_assignments(
-        db,
-        skip,
-        limit,
-    )
-
-
-@router.get(
-    "/assignments/{assignment_id}",
-    response_model=RFPAssignmentResponse,
-)
-def get_rfp_assignment_api(
-    assignment_id: int,
-    db: Session = Depends(get_db),
-):
-    return get_rfp_assignment(
-        db,
-        assignment_id,
-    )
-
-
-@router.get(
-    "/rfps/{rfp_id}/assignments",
-    response_model=list[RFPAssignmentResponse],
-)
-def get_assignments_for_rfp_api(
-    rfp_id: int,
-    db: Session = Depends(get_db),
-):
-    return get_assignments_for_rfp(
-        db,
-        rfp_id,
-    )
-
-
-@router.get(
-    "/users/{user_id}/assignments",
-    response_model=list[RFPAssignmentResponse],
-)
-def get_assignments_for_user_api(
-    user_id: int,
-    db: Session = Depends(get_db),
-):
-    return get_assignments_for_user(
-        db,
-        user_id,
-    )
-
-
-@router.put(
-    "/assignments/{assignment_id}",
-    response_model=RFPAssignmentResponse,
-)
-def replace_rfp_assignment_api(
-    assignment_id: int,
-    payload: RFPAssignmentPut,
-    db: Session = Depends(get_db),
-):
-    return update_rfp_assignment(
-        db,
-        assignment_id,
-        payload.model_dump(),
-    )
-
-
-@router.patch(
-    "/assignments/{assignment_id}",
-    response_model=RFPAssignmentResponse,
-)
-def patch_rfp_assignment_api(
-    assignment_id: int,
-    payload: RFPAssignmentPatch,
-    db: Session = Depends(get_db),
-):
-    return update_rfp_assignment(
-        db,
-        assignment_id,
-        payload.model_dump(exclude_unset=True),
-    )
-
-
-@router.delete(
-    "/assignments/{assignment_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-)
-def delete_rfp_assignment_api(
-    assignment_id: int,
-    db: Session = Depends(get_db),
-):
-    delete_rfp_assignment(
-        db,
-        assignment_id,
     )
 
     return Response(

@@ -146,72 +146,10 @@ export type PatchBidEvaluationRequest =
 
 
 /* ================================================= */
-/* RFP ASSIGNMENTS */
-/* ================================================= */
-
-export type RfpAssignmentRole =
-  | "BID_OWNER"
-  | "SOLUTION_ARCHITECT"
-  | "TECHNICAL_WRITER"
-  | "COMMERCIAL_REVIEWER"
-  | "RESOURCE_REVIEWER"
-  | "APPROVER"
-  | string;
-
-export type RfpAssignmentStatus =
-  | "ASSIGNED"
-  | "IN_PROGRESS"
-  | "COMPLETED"
-  | "CANCELLED"
-  | string;
-
-export interface RfpAssignment {
-  id: number;
-
-  rfp_id: number;
-  user_id: number;
-
-  assignment_role:
-    RfpAssignmentRole;
-
-  assignment_status:
-    RfpAssignmentStatus;
-
-  due_date: string | null;
-
-  notes: string | null;
-
-  created_at: string;
-}
-
-export interface CreateRfpAssignmentRequest {
-  rfp_id: number;
-  user_id: number;
-
-  assignment_role:
-    RfpAssignmentRole;
-
-  assignment_status:
-    RfpAssignmentStatus;
-
-  due_date: string | null;
-
-  notes: string | null;
-}
-
-export type UpdateRfpAssignmentRequest =
-  CreateRfpAssignmentRequest;
-
-export type PatchRfpAssignmentRequest =
-  Partial<CreateRfpAssignmentRequest>;
-
-
-/* ================================================= */
 /* DASHBOARD */
 /* ================================================= */
 
 export interface RfpDashboardData {
   rfps: Rfp[];
   evaluations: BidEvaluation[];
-  assignments: RfpAssignment[];
 }

@@ -1,11 +1,12 @@
+from datetime import date
 from typing import Any
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models.presale import Solution
+from app.models.presale import ResourceRequirement, Solution
 from app.models.resource_manager import (
     Employee,
     EmployeeSkill,
@@ -229,6 +230,8 @@ def get_employees(
     skip: int = 0,
     limit: int = 100,
 ) -> list[Employee]:
+    complete_expired_resource_allocations(db)
+
     return get_all_records(
         db,
         Employee,
@@ -241,6 +244,8 @@ def get_employee(
     db: Session,
     employee_id: int,
 ) -> Employee:
+    complete_expired_resource_allocations(db)
+
     return require_employee(
         db,
         employee_id,
@@ -1011,6 +1016,20 @@ def validate_resource_allocation_relations(
             detail="end_date cannot be before start_date",
         )
 
+    if (
+        start_date is not None
+        and employee.available_from is not None
+        and start_date < employee.available_from
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Employee {employee.employee_code} is available from "
+                f"{employee.available_from.isoformat()}; allocation cannot "
+                f"start on {start_date.isoformat()}"
+            ),
+        )
+
     allocation_percentage = data.get(
         "allocation_percentage",
         existing_allocation.allocation_percentage
@@ -1067,6 +1086,123 @@ def update_employee_utilization(
         employee.availability_status = "AVAILABLE"
 
 
+def synchronize_linked_requirement_allocation_status(
+    db: Session,
+    resource_request_id: int | None,
+) -> None:
+    if resource_request_id is None:
+        return
+
+    resource_request = db.get(ResourceRequest, resource_request_id)
+
+    if (
+        resource_request is None
+        or resource_request.resource_requirement_id is None
+    ):
+        return
+
+    active_allocation_count = db.scalar(
+        select(func.count(ResourceAllocation.id)).where(
+            ResourceAllocation.resource_request_id
+            == resource_request.id,
+            ResourceAllocation.allocation_status.in_(
+                {"PENDING", "CONFIRMED"},
+            ),
+        )
+    ) or 0
+
+    is_allocated = active_allocation_count > 0
+    resource_request.request_status = (
+        "ALLOCATED" if is_allocated else "PENDING"
+    )
+
+    requirement = db.get(
+        ResourceRequirement,
+        resource_request.resource_requirement_id,
+    )
+
+    if requirement is not None:
+        requirement.availability_status = (
+            "ALLOCATED" if is_allocated else "PENDING"
+        )
+
+
+def complete_expired_resource_allocations(
+    db: Session,
+    as_of: date | None = None,
+) -> int:
+    effective_date = as_of or date.today()
+    expired_allocations = list(
+        db.scalars(
+            select(ResourceAllocation)
+            .where(
+                ResourceAllocation.allocation_status.in_(
+                    {"PENDING", "CONFIRMED"},
+                ),
+                ResourceAllocation.end_date.is_not(None),
+                ResourceAllocation.end_date < effective_date,
+            )
+            .with_for_update()
+        ).all()
+    )
+
+    if not expired_allocations:
+        return 0
+
+    employee_ids = {
+        allocation.employee_id
+        for allocation in expired_allocations
+    }
+    resource_request_ids = {
+        allocation.resource_request_id
+        for allocation in expired_allocations
+        if allocation.resource_request_id is not None
+    }
+
+    for allocation in expired_allocations:
+        allocation.allocation_status = "COMPLETED"
+
+    db.flush()
+
+    for employee_id in employee_ids:
+        employee = require_employee(db, employee_id)
+        active_utilization = db.scalar(
+            select(
+                func.coalesce(
+                    func.sum(ResourceAllocation.allocation_percentage),
+                    0,
+                )
+            ).where(
+                ResourceAllocation.employee_id == employee_id,
+                ResourceAllocation.allocation_status.in_(
+                    {"PENDING", "CONFIRMED"},
+                ),
+            )
+        )
+        employee.current_utilization_percentage = min(
+            100,
+            float(active_utilization or 0),
+        )
+
+        if employee.current_utilization_percentage >= 100:
+            employee.availability_status = "ALLOCATED"
+        elif employee.current_utilization_percentage > 0:
+            employee.availability_status = "PARTIALLY_AVAILABLE"
+            employee.available_from = effective_date
+        else:
+            employee.availability_status = "AVAILABLE"
+            employee.available_from = effective_date
+
+    for resource_request_id in resource_request_ids:
+        synchronize_linked_requirement_allocation_status(
+            db,
+            resource_request_id,
+        )
+
+    db.commit()
+    return len(expired_allocations)
+
+
 def create_resource_allocation(
     db: Session,
     data: dict[str, Any],
@@ -1091,15 +1227,11 @@ def create_resource_allocation(
             data["allocation_percentage"],
         )
 
-        resource_request_id = data.get("resource_request_id")
-
-        if resource_request_id is not None:
-            resource_request = require_resource_request(
-                db,
-                resource_request_id,
-            )
-
-            resource_request.request_status = "ALLOCATED"
+        db.flush()
+        synchronize_linked_requirement_allocation_status(
+            db,
+            data.get("resource_request_id"),
+        )
 
         db.commit()
         db.refresh(allocation)
@@ -1115,6 +1247,8 @@ def get_resource_allocations(
     skip: int = 0,
     limit: int = 100,
 ) -> list[ResourceAllocation]:
+    complete_expired_resource_allocations(db)
+
     return get_all_records(
         db,
         ResourceAllocation,
@@ -1127,6 +1261,8 @@ def get_resource_allocation(
     db: Session,
     allocation_id: int,
 ) -> ResourceAllocation:
+    complete_expired_resource_allocations(db)
+
     return require_resource_allocation(
         db,
         allocation_id,
@@ -1155,6 +1291,7 @@ def update_resource_allocation(
     )
 
     old_percentage = allocation.allocation_percentage
+    old_resource_request_id = allocation.resource_request_id
 
     new_employee_id = data.get(
         "employee_id",
@@ -1195,6 +1332,16 @@ def update_resource_allocation(
         for field_name, value in data.items():
             setattr(allocation, field_name, value)
 
+        db.flush()
+        synchronize_linked_requirement_allocation_status(
+            db,
+            old_resource_request_id,
+        )
+        synchronize_linked_requirement_allocation_status(
+            db,
+            allocation.resource_request_id,
+        )
+
         db.commit()
         db.refresh(allocation)
 
@@ -1217,6 +1364,7 @@ def delete_resource_allocation(
         db,
         allocation.employee_id,
     )
+    resource_request_id = allocation.resource_request_id
 
     try:
         update_employee_utilization(
@@ -1225,6 +1373,11 @@ def delete_resource_allocation(
         )
 
         db.delete(allocation)
+        db.flush()
+        synchronize_linked_requirement_allocation_status(
+            db,
+            resource_request_id,
+        )
         db.commit()
 
     except IntegrityError as error:

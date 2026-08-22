@@ -13,7 +13,6 @@ import {
   Loader2,
   RefreshCcw,
   TrendingUp,
-  Users,
   XCircle,
 } from "lucide-react";
 
@@ -35,7 +34,6 @@ import { useRfpDashboard } from "@/hooks/useRfpDashboard";
 import type {
   BidEvaluation,
   Rfp,
-  RfpAssignment,
 } from "@/types/rfp";
 
 /* ================================================= */
@@ -157,24 +155,6 @@ function getDecisionClasses(
 
     default:
       return "bg-amber-100 text-amber-700";
-  }
-}
-
-function getAssignmentStatusClasses(
-  status: string,
-): string {
-  switch (status.toUpperCase()) {
-    case "COMPLETED":
-      return "bg-emerald-100 text-emerald-700";
-
-    case "IN_PROGRESS":
-      return "bg-indigo-100 text-indigo-700";
-
-    case "CANCELLED":
-      return "bg-red-100 text-red-700";
-
-    default:
-      return "bg-blue-100 text-blue-700";
   }
 }
 
@@ -326,73 +306,6 @@ function EvaluationRow({
 }
 
 /* ================================================= */
-/* ASSIGNMENT ROW */
-/* ================================================= */
-
-function AssignmentRow({
-  assignment,
-  rfp,
-  userName,
-}: {
-  assignment: RfpAssignment;
-  rfp?: Rfp;
-  userName?: string;
-}) {
-  return (
-    <div className="rounded-xl border border-cyan-100 bg-white p-4 transition hover:bg-cyan-50/40 hover:shadow-md">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="font-semibold text-slate-800">
-            {rfp?.title ??
-              `RFP #${assignment.rfp_id}`}
-          </p>
-
-          <p className="mt-1 text-sm text-slate-500">
-            {formatLabel(
-              assignment.assignment_role,
-            )}
-          </p>
-        </div>
-
-        <Badge
-          className={getAssignmentStatusClasses(
-            assignment.assignment_status,
-          )}
-        >
-          {formatLabel(
-            assignment.assignment_status,
-          )}
-        </Badge>
-      </div>
-
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-lg bg-blue-50 p-3">
-          <p className="text-xs text-slate-500">
-            User
-          </p>
-
-          <p className="mt-1 font-semibold text-blue-700">
-            {userName ?? "User unavailable"}
-          </p>
-        </div>
-
-        <div className="rounded-lg bg-cyan-50 p-3">
-          <p className="text-xs text-slate-500">
-            Due Date
-          </p>
-
-          <p className="mt-1 text-sm font-semibold text-cyan-700">
-            {formatDate(
-              assignment.due_date,
-            )}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ================================================= */
 /* DEADLINE ROW */
 /* ================================================= */
 
@@ -529,7 +442,7 @@ export default function RfpDashboardPage() {
     >
       <DashboardLayout
         title="RFP / Bid Management"
-        description="Manage RFP intake, bid/no-bid evaluation, cross-functional assignments and submission pipeline."
+        description="Manage RFP intake, bid/no-bid evaluation, and the submission pipeline."
       >
         {isLoading && !data ? (
           <DashboardLoading />
@@ -548,8 +461,7 @@ export default function RfpDashboardPage() {
 
                 <p className="mt-1 max-w-3xl text-sm text-slate-500">
                   Receive RFPs, evaluate bid
-                  viability, assign the response
-                  team and track submissions
+                  viability, and track submissions
                   through win or loss.
                 </p>
               </div>
@@ -577,19 +489,6 @@ export default function RfpDashboardPage() {
                   <BadgeCheck className="mr-2 h-4 w-4" />
 
                   Bid Evaluations
-                </Button>
-
-                <Button
-                  render={
-                    <Link href="/rfp/assignments" />
-                  }
-                  nativeButton={false}
-                  variant="outline"
-                  className="border-blue-200 text-blue-700 hover:bg-blue-50"
-                >
-                  <Users className="mr-2 h-4 w-4" />
-
-                  Assignments
                 </Button>
 
                 <Button
@@ -688,7 +587,7 @@ export default function RfpDashboardPage() {
                     value={metrics.inProgressCount.toLocaleString(
                       "en-US",
                     )}
-                    description={`${metrics.activeAssignments} active team assignments`}
+                    description="RFP responses being prepared"
                     icon={BriefcaseBusiness}
                     variant="blue"
                   />
@@ -923,10 +822,10 @@ export default function RfpDashboardPage() {
                 </section>
 
                 {/* ================================================= */}
-                {/* EVALUATIONS + ASSIGNMENTS */}
+                {/* EVALUATIONS */}
                 {/* ================================================= */}
 
-                <section className="grid gap-6 xl:grid-cols-2">
+                <section>
                   <Card className="rounded-2xl border-indigo-100 bg-white/90 shadow-lg shadow-indigo-100/30">
                     <CardHeader className="border-b border-indigo-50">
                       <div className="flex items-center justify-between">
@@ -975,58 +874,6 @@ export default function RfpDashboardPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="rounded-2xl border-cyan-100 bg-white/90 shadow-lg shadow-cyan-100/30">
-                    <CardHeader className="border-b border-cyan-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-lg font-bold text-slate-800">
-                            Recent Assignments
-                          </CardTitle>
-
-                          <p className="mt-1 text-sm text-slate-500">
-                            Cross-functional bid team
-                            assignments
-                          </p>
-                        </div>
-
-                        <Users className="h-5 w-5 text-cyan-600" />
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="space-y-3 p-5">
-                      {metrics.recentAssignments.length >
-                      0 ? (
-                        metrics.recentAssignments.map(
-                          (assignment) => (
-                            <AssignmentRow
-                              key={
-                                assignment.id
-                              }
-                              assignment={
-                                assignment
-                              }
-                              rfp={findRfp(
-                                assignment.rfp_id,
-                              )}
-                              userName={
-                                metrics.userNames[
-                                  assignment.user_id
-                                ]
-                              }
-                            />
-                          ),
-                        )
-                      ) : (
-                        <div className="flex min-h-48 flex-col items-center justify-center text-center">
-                          <Users className="h-10 w-10 text-cyan-300" />
-
-                          <p className="mt-3 font-semibold text-slate-700">
-                            No assignments found
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
                 </section>
 
                 {/* ================================================= */}
@@ -1049,26 +896,6 @@ export default function RfpDashboardPage() {
                           {metrics.averageEvaluationScore.toFixed(
                             1,
                           )}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="rounded-2xl border-blue-100 bg-white shadow-md">
-                    <CardContent className="flex items-center gap-4 p-5">
-                      <div className="rounded-xl bg-blue-100 p-3 text-blue-700">
-                        <Users className="h-5 w-5" />
-                      </div>
-
-                      <div>
-                        <p className="text-sm text-slate-500">
-                          Assignments
-                        </p>
-
-                        <p className="text-2xl font-bold text-slate-800">
-                          {
-                            metrics.totalAssignments
-                          }
                         </p>
                       </div>
                     </CardContent>
