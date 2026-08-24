@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatNumberInputValue } from "@/lib/utils";
 
 import {
   createEmployee,
@@ -219,7 +220,7 @@ function employeeToForm(
       employee.total_experience_years.toString(),
     location: employee.location,
     employment_type: employee.employment_type,
-    cost_rate: employee.cost_rate,
+    cost_rate: formatNumberInputValue(employee.cost_rate),
     currency: employee.currency,
     availability_status:
       employee.availability_status,
@@ -420,7 +421,7 @@ function EmployeeFormModal({
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="name@example.com"
+                placeholder="name@gmail.com"
                 required
               />
             </div>

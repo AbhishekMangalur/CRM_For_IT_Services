@@ -52,6 +52,7 @@ import {
 } from "@/lib/alliance-api";
 
 import { getSalesOpportunities } from "@/lib/sales-api";
+import { formatNumberInputValue } from "@/lib/utils";
 
 import type {
   AlliancePartner,
@@ -108,7 +109,10 @@ function SearchSelect({
     <div className="space-y-2">
       <Label htmlFor={id}>{label} *</Label>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+        />
         <Input
           id={id}
           type="search"
@@ -366,13 +370,13 @@ function influenceToForm(
       influence.influence_type,
 
     influenced_value:
-      influence.influenced_value,
+      formatNumberInputValue(influence.influenced_value),
 
     currency:
       influence.currency,
 
     referral_fee:
-      influence.referral_fee,
+      formatNumberInputValue(influence.referral_fee),
 
     tier_points:
       influence.tier_points.toString(),
@@ -688,7 +692,7 @@ function InfluenceFormModal({
                   form.influenced_value
                 }
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
               />
 
               <p className="text-xs text-slate-500">
@@ -740,7 +744,7 @@ function InfluenceFormModal({
                   form.referral_fee
                 }
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
               />
             </div>
 
@@ -760,7 +764,7 @@ function InfluenceFormModal({
                   form.tier_points
                 }
                 onChange={handleChange}
-                placeholder="10"
+                placeholder="0"
               />
             </div>
 
@@ -1648,7 +1652,10 @@ export default function AllianceInfluencedOpportunitiesPage() {
 
             <div className="mb-5 grid gap-3 xl:grid-cols-[1fr_220px_220px_190px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search
+                  className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                  aria-hidden="true"
+                />
 
                 <Input
                   value={search}

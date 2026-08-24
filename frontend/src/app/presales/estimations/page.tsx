@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatNumberInputValue } from "@/lib/utils";
 
 import {
   createEstimation,
@@ -294,19 +295,19 @@ function estimationToForm(
       estimation.estimation_model,
 
     resource_cost:
-      estimation.resource_cost,
+      formatNumberInputValue(estimation.resource_cost),
 
     infrastructure_cost:
-      estimation.infrastructure_cost,
+      formatNumberInputValue(estimation.infrastructure_cost),
 
     overhead_cost:
-      estimation.overhead_cost,
+      formatNumberInputValue(estimation.overhead_cost),
 
     contingency_percentage:
       estimation.contingency_percentage.toString(),
 
     billing_amount:
-      estimation.billing_amount,
+      formatNumberInputValue(estimation.billing_amount),
 
     currency:
       estimation.currency,
@@ -539,7 +540,7 @@ function EstimationFormModal({
                 min="0"
                 value={form.resource_cost}
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
                 required
               />
             </div>
@@ -558,7 +559,7 @@ function EstimationFormModal({
                   form.infrastructure_cost
                 }
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
                 required
               />
             </div>
@@ -575,7 +576,7 @@ function EstimationFormModal({
                 min="0"
                 value={form.overhead_cost}
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
                 required
               />
             </div>
@@ -612,7 +613,7 @@ function EstimationFormModal({
                 min="1"
                 value={form.billing_amount}
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
                 required
               />
             </div>

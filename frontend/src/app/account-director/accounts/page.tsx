@@ -46,13 +46,17 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatNumberInputValue } from "@/lib/utils";
 import {
   createAccount,
   deleteAccount,
   getAccounts,
   replaceAccount,
 } from "@/lib/account-director-api";
-import { getSalesOpportunities } from "@/lib/sales-api";
+import {
+  getSalesLeads,
+  getSalesOpportunities,
+} from "@/lib/sales-api";
 import { useAuth } from "@/hooks/useAuth";
 import type {
   AccountDirectorAccount,
@@ -62,7 +66,10 @@ import type {
   CustomerHealthStatus,
   SlaStatus,
 } from "@/types/account-director";
-import type { SalesOpportunity } from "@/types/sales";
+import type {
+  SalesLead,
+  SalesOpportunity,
+} from "@/types/sales";
 
 interface ClientOption {
   name: string;
@@ -333,7 +340,7 @@ function accountToForm(
       account.primary_contact_phone ?? "",
     account_director_id:
       account.account_director_id.toString(),
-    annual_revenue: account.annual_revenue,
+    annual_revenue: formatNumberInputValue(account.annual_revenue),
     currency: account.currency,
     customer_health_status:
       account.customer_health_status,
@@ -378,6 +385,7 @@ function formToPayload(
 
 interface AccountFormModalProps {
   account: AccountDirectorAccount | null;
+  leads: SalesLead[];
   opportunities: SalesOpportunity[];
   currentUserId: number;
   currentUserName: string;
@@ -391,6 +399,7 @@ interface AccountFormModalProps {
 
 function AccountFormModal({
   account,
+  leads,
   opportunities,
   currentUserId,
   currentUserName,
@@ -470,6 +479,34 @@ function AccountFormModal({
     }));
   }
 
+  function handleClientChange(clientName: string): void {
+    if (!clientName) {
+      setForm((previous) => ({
+        ...previous,
+        account_name: "",
+      }));
+      return;
+    }
+
+    const opportunity = opportunities.find(
+      (record) => record.client_name.trim() === clientName,
+    );
+    const lead = leads.find(
+      (record) => record.id === opportunity?.lead_id,
+    );
+
+    setForm((previous) => ({
+      ...previous,
+      account_name: clientName,
+      industry: opportunity?.industry ?? "",
+      primary_contact_name: lead?.contact_name ?? "",
+      primary_contact_email: lead?.contact_email ?? "",
+      primary_contact_phone: lead?.contact_phone ?? "",
+      annual_revenue: formatNumberInputValue(opportunity?.deal_value),
+      currency: opportunity?.currency || "USD",
+    }));
+  }
+
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
@@ -544,12 +581,7 @@ function AccountFormModal({
             <ClientCombobox
               clients={clientOptions}
               value={form.account_name}
-              onChange={(value) =>
-                setForm((previous) => ({
-                  ...previous,
-                  account_name: value,
-                }))
-              }
+              onChange={handleClientChange}
             />
 
             <div className="space-y-2">
@@ -608,7 +640,7 @@ function AccountFormModal({
                 type="email"
                 value={form.primary_contact_email}
                 onChange={handleChange}
-                placeholder="name@example.com"
+                placeholder="name@gmail.com"
               />
             </div>
 
@@ -622,7 +654,7 @@ function AccountFormModal({
                 name="primary_contact_phone"
                 value={form.primary_contact_phone}
                 onChange={handleChange}
-                placeholder="9876543210"
+                placeholder="Enter contact phone"
               />
             </div>
 
@@ -657,7 +689,7 @@ function AccountFormModal({
                   min="0"
                   value={form.annual_revenue}
                   onChange={handleChange}
-                  placeholder="1000"
+                  placeholder="0"
                   required
                 />
               </div>
@@ -978,6 +1010,7 @@ export default function AccountDirectorAccountsPage() {
   const [opportunities, setOpportunities] = useState<
     SalesOpportunity[]
   >([]);
+  const [leads, setLeads] = useState<SalesLead[]>([]);
 
   const [search, setSearch] = useState("");
   const [healthFilter, setHealthFilter] =
@@ -1011,10 +1044,14 @@ export default function AccountDirectorAccountsPage() {
       setError("");
 
       try {
-        const [records, opportunityRecords] = await Promise.all([
+        const [records, leadRecords, opportunityRecords] = await Promise.all([
           getAccounts({
             skip: 0,
             limit: 100,
+          }),
+          getSalesLeads({
+            skip: 0,
+            limit: 500,
           }),
           getSalesOpportunities({
             skip: 0,
@@ -1023,6 +1060,7 @@ export default function AccountDirectorAccountsPage() {
         ]);
 
         setAccounts(records);
+        setLeads(leadRecords);
         setOpportunities(opportunityRecords);
       } catch (requestError) {
         setError(getErrorMessage(requestError));
@@ -1577,6 +1615,7 @@ export default function AccountDirectorAccountsPage() {
         {showForm && user && (
           <AccountFormModal
             account={editingAccount}
+            leads={leads}
             opportunities={opportunities}
             currentUserId={user.id}
             currentUserName={user.full_name}

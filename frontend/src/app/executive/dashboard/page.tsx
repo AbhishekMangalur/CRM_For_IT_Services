@@ -234,7 +234,7 @@ function HistorySnapshotCard({
 
           <p className="mt-1 font-bold text-cyan-700">
             {snapshot.gross_margin_percentage.toFixed(
-              1,
+              2,
             )}
             %
           </p>
@@ -443,12 +443,12 @@ export default function ExecutiveDashboardPage() {
         {isLoading && !latest ? (
           <DashboardLoading />
         ) : (
-          <div className="space-y-6">
+          <div className="flex flex-col gap-6">
             {/* ================================================= */}
             {/* HEADER */}
             {/* ================================================= */}
 
-            <section className="flex flex-col justify-between gap-4 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-lg shadow-blue-100/30 backdrop-blur xl:flex-row xl:items-center">
+            <section className="order-3 flex flex-col justify-between gap-4 rounded-2xl border border-blue-100 bg-white/90 p-5 shadow-lg shadow-blue-100/30 backdrop-blur xl:flex-row xl:items-center">
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
                   Executive Performance Overview
@@ -552,7 +552,7 @@ export default function ExecutiveDashboardPage() {
               </Alert>
             )}
 
-            <Card className="rounded-2xl border-emerald-100 bg-white/90 shadow-lg shadow-emerald-100/30">
+            <Card className="order-4 rounded-2xl border-emerald-100 bg-white/90 shadow-lg shadow-emerald-100/30">
               <CardHeader className="border-b border-emerald-50">
                 <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                   <div>
@@ -700,7 +700,7 @@ export default function ExecutiveDashboardPage() {
             </Card>
 
             {!latest && !isLoading ? (
-              <Card className="rounded-2xl border-amber-100 bg-amber-50/70">
+              <Card className="order-1 rounded-2xl border-amber-100 bg-amber-50/70">
                 <CardContent className="flex min-h-64 flex-col items-center justify-center p-6 text-center">
                   <Activity className="h-10 w-10 text-amber-500" />
 
@@ -723,7 +723,7 @@ export default function ExecutiveDashboardPage() {
                 {/* PRIMARY KPI CARDS */}
                 {/* ================================================= */}
 
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <section className="order-1 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <StatCard
                     title="Pipeline Value"
                     value={formatCurrency(
@@ -747,7 +747,7 @@ export default function ExecutiveDashboardPage() {
                   <StatCard
                     title="Gross Margin"
                     value={`${latest.gross_margin_percentage.toFixed(
-                      1,
+                      2,
                     )}%`}
                     description="Expected overall gross margin"
                     icon={Gauge}
@@ -769,7 +769,7 @@ export default function ExecutiveDashboardPage() {
                 {/* RESOURCE KPI CARDS */}
                 {/* ================================================= */}
 
-                <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <section className="order-2 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <StatCard
                     title="Resource Utilization"
                     value={`${latest.resource_utilization_percentage.toFixed(
@@ -811,136 +811,16 @@ export default function ExecutiveDashboardPage() {
                   />
                 </section>
 
-                <ExecutiveCharts
-                  latest={latest}
-                  history={history}
-                />
+                <div className="order-5 space-y-6">
+                  <ExecutiveCharts
+                    latest={latest}
+                    history={history}
+                    actualRevenue={
+                      financialSummary?.actual_revenue ?? latest.actual_revenue
+                    }
+                  />
 
                 <ExecutiveSuccessKpis />
-
-                <Card className="rounded-2xl border-slate-200 bg-white/90 shadow-lg shadow-slate-200/40">
-                  <CardHeader className="border-b border-slate-100">
-                    <CardTitle className="text-lg font-bold text-slate-900">
-                      Executive Insights
-                    </CardTitle>
-                    <p className="text-sm text-slate-500">
-                      Decision signals calculated from the latest KPI snapshot.
-                    </p>
-                  </CardHeader>
-                  <CardContent className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Forecast conversion
-                      </p>
-                      <p className="mt-2 text-2xl font-bold text-slate-900">
-                        {Number(latest.total_pipeline_value) > 0
-                          ? `${(
-                              (Number(latest.forecast_revenue) /
-                                Number(latest.total_pipeline_value)) *
-                              100
-                            ).toFixed(1)}%`
-                          : "0.0%"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Forecast revenue as a share of pipeline
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Account risk
-                      </p>
-                      <p className="mt-2 text-2xl font-bold text-slate-900">
-                        {latest.healthy_accounts + latest.at_risk_accounts > 0
-                          ? `${(
-                              (latest.at_risk_accounts /
-                                (latest.healthy_accounts +
-                                  latest.at_risk_accounts)) *
-                              100
-                            ).toFixed(1)}%`
-                          : "0.0%"}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {latest.at_risk_accounts} accounts currently at risk
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Renewal exposure
-                      </p>
-                      <p className="mt-2 text-2xl font-bold text-slate-900">
-                        {latest.contracts_due_for_renewal}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        Contracts approaching renewal
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">
-                        Capacity signal
-                      </p>
-                      <p className="mt-2 text-2xl font-bold text-slate-900">
-                        {latest.resource_utilization_percentage.toFixed(1)}%
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {latest.available_employees} employees available
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="rounded-2xl border-slate-200 bg-white/90 shadow-lg shadow-slate-200/30">
-                  <CardHeader className="border-b border-slate-100">
-                    <CardTitle className="text-lg font-bold text-slate-900">
-                      Additional Revenue Metrics
-                    </CardTitle>
-                    <p className="text-sm text-slate-500">
-                      Revenue actuals and partner contribution at a glance.
-                    </p>
-                  </CardHeader>
-
-                  <CardContent className="grid gap-4 p-5 sm:grid-cols-2">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-center gap-3">
-                        <WalletCards className="h-5 w-5 text-slate-500" />
-                        <div>
-                          <p className="text-xs text-slate-500">
-                            Actual Revenue
-                          </p>
-                          <p className="mt-1 text-xl font-bold text-slate-900">
-                            {formatCurrency(
-                              financialSummary?.actual_revenue ?? 0,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="mt-3 text-xs text-slate-500">
-                        Revenue imported from ERP financial actuals.
-                      </p>
-                    </div>
-
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-center gap-3">
-                        <TrendingUp className="h-5 w-5 text-slate-500" />
-                        <div>
-                          <p className="text-xs text-slate-500">
-                            Partner Influenced Pipeline
-                          </p>
-                          <p className="mt-1 text-xl font-bold text-slate-900">
-                            {formatCurrency(
-                              latest.partner_influenced_pipeline,
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                      <p className="mt-3 text-xs text-slate-500">
-                        Total value of active partner-influenced opportunities.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {/* ================================================= */}
                 {/* CUSTOMER + EMPLOYEE SUMMARY */}
@@ -1251,7 +1131,8 @@ export default function ExecutiveDashboardPage() {
                       </div>
                     )}
                   </CardContent>
-                </Card>
+                  </Card>
+                </div>
 
               </>
             )}

@@ -170,17 +170,10 @@ def validate_rfp(
         owner_id,
     )
 
-    if owner.role.name not in {
-        "SALES",
-        "PRESALES",
-        "ACCOUNT_DIRECTOR",
-    }:
+    if owner.role.name != "SALES":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=(
-                "RFP owner must have SALES, PRESALES, "
-                "or ACCOUNT_DIRECTOR role"
-            ),
+            detail="RFP owner must have the SALES role",
         )
 
     rfp_number = data.get(

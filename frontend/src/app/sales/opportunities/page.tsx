@@ -44,6 +44,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { formatNumberInputValue } from "@/lib/utils";
 import {
   createSalesOpportunity,
   deleteSalesOpportunity,
@@ -122,7 +123,10 @@ function LeadCombobox({
       </Label>
 
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+        />
         <Input
           id="lead_search"
           type="search"
@@ -193,6 +197,7 @@ interface OwnerComboboxProps {
   users: OpportunityOwnerUser[];
   value: string;
   required?: boolean;
+  showSearchIcon?: boolean;
   onChange: (value: string) => void;
 }
 
@@ -202,6 +207,7 @@ function OwnerCombobox({
   users,
   value,
   required = false,
+  showSearchIcon = false,
   onChange,
 }: OwnerComboboxProps) {
   const selectedUser = users.find(
@@ -225,9 +231,16 @@ function OwnerCombobox({
         {label}{required ? " *" : ""}
       </Label>
       <div className="relative">
+        {showSearchIcon && (
+          <Search
+            className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+            aria-hidden="true"
+          />
+        )}
         <Input
           id={id}
           type="search"
+          className={showSearchIcon ? "pl-10" : undefined}
           autoComplete="off"
           value={query}
           required={required}
@@ -438,7 +451,7 @@ function opportunityToForm(
     client_name: opportunity.client_name,
     service_type: opportunity.service_type,
     industry: opportunity.industry,
-    deal_value: opportunity.deal_value,
+    deal_value: formatNumberInputValue(opportunity.deal_value),
     currency: opportunity.currency,
     pipeline_stage: opportunity.pipeline_stage,
     win_probability:
@@ -638,7 +651,7 @@ function OpportunityFormModal({
                 name="opportunity_name"
                 value={form.opportunity_name}
                 onChange={handleChange}
-                placeholder="Cloud Migration Project"
+                placeholder="Cloud Migration Opportunity"
                 required
               />
             </div>
@@ -653,7 +666,7 @@ function OpportunityFormModal({
                 name="client_name"
                 value={form.client_name}
                 onChange={handleChange}
-                placeholder="ABC Technologies"
+                placeholder="Enter client name"
                 required
               />
             </div>
@@ -701,7 +714,7 @@ function OpportunityFormModal({
                   min="0"
                   value={form.deal_value}
                   onChange={handleChange}
-                  placeholder="1000"
+                  placeholder="0"
                 />
                 <p className="text-xs text-slate-500">
                   Optional until estimation is completed. Blank values are saved as $0.
@@ -817,6 +830,7 @@ function OpportunityFormModal({
                 (user) => user.role.name === "PRESALES",
               )}
               value={form.presales_owner_id}
+              showSearchIcon
               onChange={(value) =>
                 setForm((previous) => ({
                   ...previous,
@@ -1449,7 +1463,10 @@ export default function SalesOpportunitiesPage() {
 
               <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_200px_220px]">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search
+                    className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                    aria-hidden="true"
+                  />
 
                   <Input
                     value={search}

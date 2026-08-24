@@ -42,6 +42,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
+import { formatNumberInputValue } from "@/lib/utils";
 import {
   createSalesLead,
   deleteSalesLead,
@@ -218,7 +219,7 @@ function leadToForm(lead: SalesLead): LeadFormState {
     lead_source: lead.lead_source ?? "",
     lead_status: lead.lead_status,
     priority: lead.priority,
-    estimated_value: lead.estimated_value,
+    estimated_value: formatNumberInputValue(lead.estimated_value),
     assigned_sales_id:
       lead.assigned_sales_id?.toString() ?? "",
     next_follow_up_date:
@@ -377,7 +378,7 @@ function LeadFormModal({
                 name="company_name"
                 value={form.company_name}
                 onChange={handleChange}
-                placeholder="ABC Technologies"
+                placeholder="Enter client name"
                 required
               />
             </div>
@@ -408,7 +409,7 @@ function LeadFormModal({
                 type="email"
                 value={form.contact_email}
                 onChange={handleChange}
-                placeholder="name@example.com"
+                placeholder="name@gmail.com"
               />
             </div>
 
@@ -422,7 +423,7 @@ function LeadFormModal({
                 name="contact_phone"
                 value={form.contact_phone}
                 onChange={handleChange}
-                placeholder="9876543210"
+                placeholder="Enter phone number"
               />
             </div>
 
@@ -436,7 +437,7 @@ function LeadFormModal({
                 name="designation"
                 value={form.designation}
                 onChange={handleChange}
-                placeholder="IT Manager"
+                placeholder="Enter designation"
               />
             </div>
 
@@ -450,7 +451,7 @@ function LeadFormModal({
                 name="lead_source"
                 value={form.lead_source}
                 onChange={handleChange}
-                placeholder="LinkedIn"
+                placeholder="Enter lead source"
               />
             </div>
 
@@ -514,7 +515,7 @@ function LeadFormModal({
                 min="0"
                 value={form.estimated_value}
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="Enter estimated value"
               />
             </div>
 
@@ -524,9 +525,14 @@ function LeadFormModal({
               </Label>
 
               <div className="relative">
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  aria-hidden="true"
+                />
                 <Input
                   id="assigned_sales_search"
                   type="search"
+                  className="pl-10"
                   autoComplete="off"
                   value={salesSearch}
                   onFocus={() => setIsSalesMenuOpen(true)}
@@ -1056,7 +1062,10 @@ export default function SalesLeadsPage() {
 
               <div className="mb-5 flex flex-col gap-3 md:flex-row">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search
+                    className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                    aria-hidden="true"
+                  />
 
                   <Input
                     value={search}

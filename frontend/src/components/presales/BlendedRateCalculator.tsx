@@ -94,6 +94,7 @@ function money(
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
+    minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(Number(value) || 0);
 }
@@ -140,7 +141,14 @@ export function BlendedRateCalculator({
         setResult(data);
 
         if (data.rates?.length) {
-          setRates(data.rates);
+          setRates(
+            data.rates.map((rate) => ({
+              ...rate,
+              resource_ratio: Number(rate.resource_ratio),
+              bill_rate: Number(rate.bill_rate),
+              cost_rate: Number(rate.cost_rate),
+            })),
+          );
         }
       } catch (requestError) {
         if (
@@ -360,6 +368,7 @@ export function BlendedRateCalculator({
                       type="number"
                       min="0"
                       max="100"
+                      placeholder="0"
                       value={
                         rate.resource_ratio
                       }
@@ -377,6 +386,7 @@ export function BlendedRateCalculator({
                     <Input
                       type="number"
                       min="0"
+                      placeholder="0"
                       value={rate.cost_rate}
                       onChange={(event) =>
                         updateRate(
@@ -392,6 +402,7 @@ export function BlendedRateCalculator({
                     <Input
                       type="number"
                       min="0"
+                      placeholder="0"
                       value={rate.bill_rate}
                       onChange={(event) =>
                         updateRate(

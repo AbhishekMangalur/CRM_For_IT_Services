@@ -353,7 +353,7 @@ export default function LoginPage() {
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
-                    placeholder="name@example.com"
+                    placeholder="name@gmail.com"
                     className="h-12 border-slate-300 bg-white pl-10 text-slate-900 placeholder:text-slate-400 focus-visible:border-blue-600 focus-visible:ring-blue-600/20"
                     disabled={isSubmitting}
                     autoComplete="email"

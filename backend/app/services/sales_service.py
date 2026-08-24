@@ -424,6 +424,21 @@ def delete_opportunity(
 # =========================================================
 
 
+def is_completed_qualification_activity(
+    status_value: str | None,
+    subject: str | None,
+) -> bool:
+    normalized_subject = (subject or "").casefold()
+
+    return (
+        (status_value or "").upper() == "COMPLETED"
+        and any(
+            qualification_term in normalized_subject
+            for qualification_term in ("qualif", "qulif")
+        )
+    )
+
+
 def validate_activity_relations(
     db: Session,
     data: dict[str, Any],
@@ -469,7 +484,51 @@ def create_sales_activity(
     validate_activity_relations(db, data)
 
     try:
-        return create_record(db, SalesActivity, data)
+        lead_id = data.get("lead_id")
+        lead: Lead | None = None
+        has_existing_lead_activity = False
+
+        if lead_id is not None:
+            # Lock the lead so concurrent first activities cannot race the
+            # NEW -> CONTACTED transition.
+            lead = db.scalar(
+                select(Lead)
+                .where(Lead.id == lead_id)
+                .with_for_update()
+            )
+            has_existing_lead_activity = (
+                db.scalar(
+                    select(SalesActivity.id)
+                    .where(SalesActivity.lead_id == lead_id)
+                    .limit(1)
+                )
+                is not None
+            )
+
+        activity = SalesActivity(**data)
+        db.add(activity)
+
+        if (
+            lead is not None
+            and not has_existing_lead_activity
+            and lead.lead_status == "NEW"
+            and data.get("status", "PLANNED").upper() == "COMPLETED"
+        ):
+            lead.lead_status = "CONTACTED"
+
+        if (
+            lead is not None
+            and lead.lead_status == "CONTACTED"
+            and is_completed_qualification_activity(
+                data.get("status"),
+                data.get("subject"),
+            )
+        ):
+            lead.lead_status = "QUALIFIED"
+
+        db.commit()
+        db.refresh(activity)
+        return activity
     except IntegrityError as error:
         handle_integrity_error(db, error)
 
@@ -520,7 +579,47 @@ def update_sales_activity(
     )
 
     try:
-        return update_record(db, activity, data)
+        for field_name, value in data.items():
+            setattr(activity, field_name, value)
+
+        db.flush()
+
+        if (
+            activity.lead_id is not None
+            and (activity.status or "").upper() == "COMPLETED"
+        ):
+            lead = db.scalar(
+                select(Lead)
+                .where(Lead.id == activity.lead_id)
+                .with_for_update()
+            )
+            first_activity_id = db.scalar(
+                select(SalesActivity.id)
+                .where(SalesActivity.lead_id == activity.lead_id)
+                .order_by(SalesActivity.id.asc())
+                .limit(1)
+            )
+
+            if (
+                lead is not None
+                and lead.lead_status == "NEW"
+                and first_activity_id == activity.id
+            ):
+                lead.lead_status = "CONTACTED"
+
+            if (
+                lead is not None
+                and lead.lead_status == "CONTACTED"
+                and is_completed_qualification_activity(
+                    activity.status,
+                    activity.subject,
+                )
+            ):
+                lead.lead_status = "QUALIFIED"
+
+        db.commit()
+        db.refresh(activity)
+        return activity
     except IntegrityError as error:
         handle_integrity_error(db, error)
 

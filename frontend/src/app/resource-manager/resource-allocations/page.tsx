@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import axios from "axios";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BriefcaseBusiness,
   CalendarDays,
@@ -25,6 +26,7 @@ import {
 } from "lucide-react";
 
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { useAuth } from "@/hooks/useAuth";
 import { DashboardLayout } from "@/components/dashboard/DashboardLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -43,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 
 import {
+  createResourceAllocation,
   getEmployees,
   getResourceAllocations,
   getResourceRequests,
@@ -329,8 +332,6 @@ interface AllocationFormModalProps {
   ) => Promise<void>;
 }
 
-// The allocation form is intentionally unreachable from this read-only page.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function AllocationFormModal({
   allocation,
   employees,
@@ -1078,6 +1079,11 @@ function AllocationDetailsModal({
 /* ================================================= */
 
 function ResourceManagerAllocationsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const isSoftBookingFormOpen =
+    searchParams.get("allocate") === "soft-booking";
   const [
     allocations,
     setAllocations,
@@ -1129,6 +1135,10 @@ function ResourceManagerAllocationsContent() {
 
   const [error, setError] =
     useState("");
+  const [formError, setFormError] =
+    useState("");
+  const [isSaving, setIsSaving] =
+    useState(false);
 
   const [
     viewingAllocation,
@@ -1420,6 +1430,37 @@ function ResourceManagerAllocationsContent() {
             allocation.employee_id,
         ),
     ).size;
+
+  function closeAllocationForm(): void {
+    setFormError("");
+    router.replace("/resource-manager/resource-allocations");
+  }
+
+  async function handleCreateAllocation(
+    payload: CreateResourceAllocationRequest,
+  ): Promise<void> {
+    if (!user) {
+      setFormError("Unable to identify the current user.");
+      return;
+    }
+
+    setIsSaving(true);
+    setFormError("");
+
+    try {
+      await createResourceAllocation({
+        ...payload,
+        allocation_type: "SOFT_BOOKING",
+        allocated_by: user.id,
+      });
+      await loadData();
+      closeAllocationForm();
+    } catch (requestError) {
+      setFormError(getErrorMessage(requestError));
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   return (
     <ProtectedRoute allowedRole="RESOURCE_MANAGER">
@@ -1919,6 +1960,35 @@ function ResourceManagerAllocationsContent() {
                 null,
               )
             }
+          />
+        )}
+
+        {isSoftBookingFormOpen && user && (
+          <AllocationFormModal
+            key={searchParams.toString()}
+            allocation={null}
+            employees={employees}
+            opportunities={opportunities}
+            solutions={solutions}
+            resourceRequests={resourceRequests}
+            currentUserId={user.id}
+            currentUserName={user.full_name}
+            isSaving={isSaving}
+            error={formError}
+            prefill={{
+              employee_id: searchParams.get("employee_id") ?? "",
+              resource_request_id:
+                searchParams.get("resource_request_id") ?? "",
+              opportunity_id:
+                searchParams.get("opportunity_id") ?? "",
+              solution_id: searchParams.get("solution_id") ?? "",
+              start_date: searchParams.get("start_date") ?? "",
+              end_date: searchParams.get("end_date") ?? "",
+              allocation_percentage:
+                searchParams.get("allocation_percentage") ?? "",
+            }}
+            onClose={closeAllocationForm}
+            onSubmit={handleCreateAllocation}
           />
         )}
       </DashboardLayout>

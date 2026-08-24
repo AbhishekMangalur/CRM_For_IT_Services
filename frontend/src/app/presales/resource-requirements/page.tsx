@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatNumberInputValue } from "@/lib/utils";
 
 import {
   createResourceRequirement,
@@ -318,10 +319,10 @@ function resourceToForm(
       resource.allocation_percentage.toString(),
 
     cost_rate:
-      resource.cost_rate,
+      formatNumberInputValue(resource.cost_rate),
 
     billing_rate:
-      resource.billing_rate,
+      formatNumberInputValue(resource.billing_rate),
 
     availability_status:
       resource.availability_status,
@@ -591,7 +592,7 @@ function ResourceFormModal({
                   form.minimum_experience_years
                 }
                 onChange={handleChange}
-                placeholder="3"
+                placeholder="0"
                 required
               />
             </div>
@@ -650,7 +651,7 @@ function ResourceFormModal({
                 min="1"
                 value={form.duration_months}
                 onChange={handleChange}
-                placeholder="6"
+                placeholder="0"
                 required
               />
             </div>
@@ -686,7 +687,7 @@ function ResourceFormModal({
                 min="0"
                 value={form.cost_rate}
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
                 required
               />
             </div>
@@ -703,7 +704,7 @@ function ResourceFormModal({
                 min="0"
                 value={form.billing_rate}
                 onChange={handleChange}
-                placeholder="1000"
+                placeholder="0"
                 required
               />
             </div>

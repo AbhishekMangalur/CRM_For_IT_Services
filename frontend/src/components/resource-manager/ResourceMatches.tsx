@@ -9,6 +9,7 @@ import {
   Search,
   UserRoundCheck,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import {
   getResourceRequestMatches,
@@ -54,6 +55,7 @@ function badgeClass(
 export function ResourceMatches({
   request,
 }: Props) {
+  const router = useRouter();
   const [matches, setMatches] =
     useState<ResourceMatch[]>([]);
 
@@ -97,6 +99,25 @@ export function ResourceMatches({
     } finally {
       setLoading(false);
     }
+  }
+
+  function openAllocationForm(
+    match: ResourceMatch,
+  ): void {
+    const parameters = new URLSearchParams({
+      allocate: "soft-booking",
+      employee_id: match.employee_id.toString(),
+      resource_request_id: request.id.toString(),
+      opportunity_id: request.opportunity_id?.toString() ?? "",
+      solution_id: request.solution_id?.toString() ?? "",
+      start_date: request.required_from,
+      end_date: request.required_until ?? "",
+      allocation_percentage: request.allocation_percentage.toString(),
+    });
+
+    router.push(
+      `/resource-manager/resource-allocations?${parameters.toString()}`,
+    );
   }
 
   return (
@@ -187,6 +208,9 @@ export function ResourceMatches({
                   <th className="p-3">
                     Status
                   </th>
+                  <th className="p-3 text-right">
+                    Action
+                  </th>
                 </tr>
               </thead>
 
@@ -268,6 +292,22 @@ export function ResourceMatches({
                           match.match_status
                         }
                       </Badge>
+                    </td>
+
+                    <td className="p-3 text-right">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-blue-700 hover:bg-blue-800"
+                        disabled={
+                          request.request_status === "ALLOCATED" ||
+                          request.request_status === "CANCELLED"
+                        }
+                        onClick={() => openAllocationForm(match)}
+                      >
+                        <UserRoundCheck className="mr-2 h-4 w-4" />
+                        Allocate Employee
+                      </Button>
                     </td>
 
                   </tr>

@@ -528,7 +528,7 @@ function PartnerFormModal({
                   form.contact_email
                 }
                 onChange={handleChange}
-                placeholder="name@example.com"
+                placeholder="name@gmail.com"
                 required
               />
             </div>
@@ -1234,7 +1234,10 @@ export default function AlliancePartnersPage() {
 
             <div className="mb-5 grid gap-3 xl:grid-cols-[1fr_210px_210px_180px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search
+                  className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                  aria-hidden="true"
+                />
 
                 <Input
                   value={search}

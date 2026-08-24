@@ -607,7 +607,7 @@ function SolutionFormModal({
                   form.estimated_duration_months
                 }
                 onChange={handleChange}
-                placeholder="6"
+                placeholder="0"
                 required
               />
             </div>

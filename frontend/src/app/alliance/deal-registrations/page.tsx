@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { formatNumberInputValue } from "@/lib/utils";
 
 import {
   createDealRegistration,
@@ -127,7 +128,10 @@ function SearchSelect({
       </Label>
 
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+        />
         <Input
           id={id}
           type="search"
@@ -366,7 +370,7 @@ function registrationToForm(
       registration.expiry_date ?? "",
 
     expected_incentive:
-      registration.expected_incentive,
+      formatNumberInputValue(registration.expected_incentive),
 
     currency:
       registration.currency,
@@ -1497,7 +1501,10 @@ export default function AllianceDealRegistrationsPage() {
 
             <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_230px_220px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search
+                  className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                  aria-hidden="true"
+                />
 
                 <Input
                   value={search}

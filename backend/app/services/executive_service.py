@@ -14,7 +14,7 @@ from app.models.account_director import (
 )
 from app.models.alliance import PartnerInfluencedOpportunity
 from app.models.executive import ExecutiveKPISnapshot
-from app.models.presale import Estimation
+from app.models.presale import Estimation, Solution
 from app.models.resource_manager import (
     Employee,
     ResourceRequest,
@@ -173,8 +173,18 @@ def calculate_margin_kpis(
     db: Session,
 ) -> dict:
     approved_estimations = db.scalars(
-        select(Estimation).where(
-            Estimation.approval_status == "APPROVED"
+        select(Estimation)
+        .join(
+            Solution,
+            Estimation.solution_id == Solution.id,
+        )
+        .join(
+            Opportunity,
+            Solution.opportunity_id == Opportunity.id,
+        )
+        .where(
+            Estimation.approval_status == "APPROVED",
+            Opportunity.status != "LOST",
         )
     ).all()
 

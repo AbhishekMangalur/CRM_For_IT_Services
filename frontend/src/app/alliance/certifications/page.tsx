@@ -108,7 +108,10 @@ function SearchSelect({
     <div className="space-y-2">
       <Label htmlFor={id}>{label} *</Label>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+        />
         <Input
           id={id}
           type="search"
@@ -1656,7 +1659,10 @@ export default function AllianceCertificationsPage() {
 
             <div className="mb-5 grid gap-3 xl:grid-cols-[1fr_220px_210px_190px]">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Search
+                  className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                  aria-hidden="true"
+                />
 
                 <Input
                   value={search}

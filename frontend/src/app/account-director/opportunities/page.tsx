@@ -46,6 +46,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
+import { formatNumberInputValue } from "@/lib/utils";
 import {
   createAccountOpportunity,
   deleteAccountOpportunity,
@@ -301,7 +302,7 @@ function opportunityToForm(
     opportunity_name:
       opportunity.opportunity_name,
     service_type: opportunity.service_type,
-    estimated_value: opportunity.estimated_value,
+    estimated_value: formatNumberInputValue(opportunity.estimated_value),
     currency: opportunity.currency,
     probability: opportunity.probability.toString(),
     expected_close_date:

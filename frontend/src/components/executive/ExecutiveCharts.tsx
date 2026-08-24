@@ -34,7 +34,19 @@ import { getRevenueByPartnerKpi } from "@/lib/executive-api";
 interface ExecutiveChartsProps {
   latest: ExecutiveKpiSnapshot;
   history: ExecutiveKpiSnapshot[];
+  actualRevenue?: string | number;
 }
+
+const PARTNER_COLORS = [
+  "#f97316",
+  "#a855f7",
+  "#ec4899",
+  "#eab308",
+  "#14b8a6",
+  "#8b5cf6",
+  "#f43f5e",
+  "#84cc16",
+];
 
 function monthLabel(value: string): string {
   const date = new Date(value);
@@ -60,6 +72,7 @@ function formatFullNumber(
 export function ExecutiveCharts({
   latest,
   history,
+  actualRevenue,
 }: ExecutiveChartsProps) {
   const [partnerRevenue, setPartnerRevenue] = useState<
     RevenueByPartnerKpi[]
@@ -135,6 +148,25 @@ export function ExecutiveCharts({
       value: latest.available_employees,
     },
   ];
+
+  const partnerPipelineVsActualData = [
+    {
+      name: "Partner Influenced Pipeline",
+      value: Number(latest.partner_influenced_pipeline),
+    },
+    {
+      name: "Actual Revenue",
+      value: Number(actualRevenue ?? latest.actual_revenue),
+    },
+  ];
+
+  const partnerPieData = partnerRevenue.filter(
+    (partner) => Number(partner.revenue) > 0,
+  );
+  const totalPartnerRevenue = partnerPieData.reduce(
+    (total, partner) => total + Number(partner.revenue),
+    0,
+  );
 
   return (
     <div className="space-y-6">
@@ -247,6 +279,7 @@ export function ExecutiveCharts({
               </ResponsiveContainer>
             </div>
           )}
+
         </CardContent>
       </Card>
 
@@ -306,11 +339,117 @@ export function ExecutiveCharts({
               </ResponsiveContainer>
             </div>
           )}
+
         </CardContent>
       </Card>
       </div>
 
       {/* ================================================= */}
+      <div className="grid gap-6 xl:grid-cols-2">
+        <Card className="rounded-2xl border-orange-100 bg-white/90 shadow-lg shadow-orange-100/30">
+          <CardHeader className="border-b border-orange-50">
+            <CardTitle className="text-lg font-bold text-slate-800">
+              Partner Influenced Pipeline vs Actual Revenue
+            </CardTitle>
+            <p className="text-sm text-slate-500">
+              Current partner-influenced pipeline compared with imported actual revenue.
+            </p>
+          </CardHeader>
+          <CardContent className="p-5">
+            <div className="h-[340px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={partnerPipelineVsActualData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tickFormatter={formatFullNumber} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="name" width={125} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    formatter={(value) =>
+                      new Intl.NumberFormat("en-US", {
+                        style: "currency",
+                        currency: "USD",
+                        maximumFractionDigits: 0,
+                      }).format(Number(value))
+                    }
+                  />
+                  <Bar dataKey="value" name="Revenue" radius={[0, 6, 6, 0]}>
+                    <Cell fill="#b7410e" />
+                    <Cell fill="#a855f7" />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-fuchsia-100 bg-white/90 shadow-lg shadow-fuchsia-100/30">
+          <CardHeader className="border-b border-fuchsia-50">
+            <CardTitle className="text-lg font-bold text-slate-800">
+              Revenue Share by Partner
+            </CardTitle>
+            <p className="text-sm text-slate-500">
+              Each partner&apos;s percentage of total influenced revenue.
+            </p>
+          </CardHeader>
+          <CardContent className="p-5">
+            {isLoadingPartnerRevenue ? (
+              <div className="flex h-[340px] items-center justify-center text-sm text-slate-500">
+                Loading partner revenue...
+              </div>
+            ) : partnerPieData.length === 0 ? (
+              <div className="flex h-[340px] items-center justify-center text-sm text-slate-500">
+                No partner revenue is available.
+              </div>
+            ) : (
+              <div className="h-[340px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={partnerPieData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={110}
+                      paddingAngle={2}
+                      dataKey="revenue"
+                      nameKey="partner_name"
+                      label={({ name, value }) => {
+                        const percentage = totalPartnerRevenue
+                          ? (Number(value) / totalPartnerRevenue) * 100
+                          : 0;
+                        return `${name}: ${percentage.toFixed(1)}%`;
+                      }}
+                    >
+                      {partnerPieData.map((partner, index) => (
+                        <Cell
+                          key={partner.partner_name}
+                          fill={PARTNER_COLORS[index % PARTNER_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => {
+                        const numericValue = Number(value);
+                        const percentage = totalPartnerRevenue
+                          ? (numericValue / totalPartnerRevenue) * 100
+                          : 0;
+                        return [
+                          `${new Intl.NumberFormat("en-US", {
+                            style: "currency",
+                            currency: "USD",
+                            maximumFractionDigits: 0,
+                          }).format(numericValue)} (${percentage.toFixed(1)}%)`,
+                          "Partner Revenue",
+                        ];
+                      }}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* UTILIZATION + WORKFORCE */}
       {/* ================================================= */}
 

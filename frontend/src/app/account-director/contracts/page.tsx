@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatNumberInputValue } from "@/lib/utils";
 import {
   createContract,
   deleteContract,
@@ -310,7 +311,7 @@ function contractToForm(
     account_id: contract.account_id.toString(),
     contract_number: contract.contract_number,
     contract_type: contract.contract_type,
-    contract_value: contract.contract_value,
+    contract_value: formatNumberInputValue(contract.contract_value),
     currency: contract.currency,
     start_date: contract.start_date,
     end_date: contract.end_date,
@@ -375,6 +376,19 @@ function ContractFormModal({
     setForm((previous) => ({
       ...previous,
       [name]: value,
+    }));
+  }
+
+  function handleAccountChange(accountId: string): void {
+    const selectedAccount = accounts.find(
+      (account) => account.id.toString() === accountId,
+    );
+
+    setForm((previous) => ({
+      ...previous,
+      account_id: accountId,
+      contract_value: formatNumberInputValue(selectedAccount?.annual_revenue),
+      currency: selectedAccount?.currency || "USD",
     }));
   }
 
@@ -469,12 +483,7 @@ function ContractFormModal({
             <AccountCombobox
               accounts={accounts}
               value={form.account_id}
-              onChange={(value) =>
-                setForm((previous) => ({
-                  ...previous,
-                  account_id: value,
-                }))
-              }
+              onChange={handleAccountChange}
             />
 
             <div className="space-y-2">
@@ -535,7 +544,7 @@ function ContractFormModal({
                   min="1"
                   value={form.contract_value}
                   onChange={handleChange}
-                  placeholder="1000"
+                  placeholder="0"
                   required
                 />
               </div>

@@ -45,8 +45,15 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 import { api } from "@/lib/api";
-import { getSalesOpportunities } from "@/lib/sales-api";
-import type { SalesOpportunity } from "@/types/sales";
+import { formatNumberInputValue } from "@/lib/utils";
+import {
+  getSalesLeads,
+  getSalesOpportunities,
+} from "@/lib/sales-api";
+import type {
+  SalesLead,
+  SalesOpportunity,
+} from "@/types/sales";
 
 import {
   createRfp,
@@ -102,7 +109,10 @@ function SearchSelect({
     <div className="space-y-2">
       <Label htmlFor={id}>{label} *</Label>
       <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400"
+          aria-hidden="true"
+        />
         <Input
           id={id}
           type="search"
@@ -429,7 +439,7 @@ function rfpToForm(
       rfp.service_type,
 
     estimated_value:
-      rfp.estimated_value,
+      formatNumberInputValue(rfp.estimated_value),
 
     currency:
       rfp.currency,
@@ -522,6 +532,7 @@ interface RfpFormModalProps {
   rfp: Rfp | null;
 
   owners: RfpOwnerUser[];
+  leads: SalesLead[];
   opportunities: SalesOpportunity[];
 
   isSaving: boolean;
@@ -538,6 +549,7 @@ interface RfpFormModalProps {
 function RfpFormModal({
   rfp,
   owners,
+  leads,
   opportunities,
   isSaving,
   error,
@@ -565,14 +577,19 @@ function RfpFormModal({
 
     if (!opportunity) return;
 
+    const linkedLead = leads.find(
+      (lead) => lead.id === opportunity.lead_id,
+    );
+
     setForm((previous) => ({
       ...previous,
       title: opportunity.opportunity_name,
       client_name: opportunity.client_name,
       industry: opportunity.industry ?? "",
       service_type: opportunity.service_type,
-      estimated_value: opportunity.deal_value,
+      estimated_value: formatNumberInputValue(opportunity.deal_value),
       currency: opportunity.currency || "USD",
+      source: linkedLead?.lead_source ?? "",
       description: opportunity.description ?? "",
       owner_id: opportunity.sales_owner_id.toString(),
     }));
@@ -871,7 +888,7 @@ function RfpFormModal({
                 name="source"
                 value={form.source}
                 onChange={handleChange}
-                placeholder="client@example.com"
+                placeholder="name@gmail.com"
                 required
               />
             </div>
@@ -893,7 +910,7 @@ function RfpFormModal({
                     form.estimated_value
                   }
                   onChange={handleChange}
-                  placeholder="1000"
+                  placeholder="0"
                   required
                 />
               </div>
@@ -1337,6 +1354,8 @@ export default function RfpsPage() {
 
   const [owners, setOwners] =
     useState<RfpOwnerUser[]>([]);
+  const [leads, setLeads] =
+    useState<SalesLead[]>([]);
   const [opportunities, setOpportunities] =
     useState<SalesOpportunity[]>([]);
 
@@ -1408,6 +1427,7 @@ export default function RfpsPage() {
           const [
             rfpRecords,
             userRecords,
+            leadRecords,
             opportunityRecords,
           ] = await Promise.all([
             getRfps({
@@ -1416,27 +1436,22 @@ export default function RfpsPage() {
             }),
 
             getUsers(),
+            getSalesLeads({ skip: 0, limit: 500 }),
             getSalesOpportunities({ skip: 0, limit: 500 }),
           ]);
 
           setRfps(rfpRecords);
+          setLeads(leadRecords);
           setOpportunities(opportunityRecords);
 
           /*
            * Backend rule:
-           * RFP owner must be active SALES,
-           * PRESALES or ACCOUNT_DIRECTOR.
+           * RFP owner must be an active SALES user.
            */
           const allowedOwners =
             userRecords.filter(
               (user) =>
-                [
-                  "SALES",
-                  "PRESALES",
-                  "ACCOUNT_DIRECTOR",
-                ].includes(
-                  user.role.name,
-                ) &&
+                user.role.name === "SALES" &&
                 user.is_active !==
                   false,
             );
@@ -1892,7 +1907,10 @@ export default function RfpsPage() {
 
               <div className="mb-5 grid gap-3 xl:grid-cols-[1fr_210px_200px_230px]">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <Search
+                    className="pointer-events-none absolute bottom-0 left-3 top-0 z-10 my-auto h-4 w-4 text-slate-400"
+                    aria-hidden="true"
+                  />
 
                   <Input
                     value={search}
@@ -2313,6 +2331,7 @@ export default function RfpsPage() {
           <RfpFormModal
             rfp={editingRfp}
             owners={owners}
+            leads={leads}
             opportunities={opportunities}
             isSaving={isSaving}
             error={formError}

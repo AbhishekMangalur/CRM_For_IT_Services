@@ -329,7 +329,7 @@ export default function RegisterPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="name@example.com"
+                    placeholder="name@gmail.com"
                     className="h-12 pl-10"
                     value={form.email}
                     onChange={(e) =>
