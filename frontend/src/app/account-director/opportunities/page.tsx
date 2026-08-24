@@ -497,7 +497,7 @@ function OpportunityFormModal({
                   min="1"
                   value={form.estimated_value}
                   onChange={handleChange}
-                  placeholder="1000"
+                  placeholder="0"
                   required
                 />
               </div>

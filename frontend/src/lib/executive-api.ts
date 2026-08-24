@@ -7,6 +7,7 @@ import type {
   FinancialImportResult,
   GenerateExecutiveKpiSnapshotRequest,
   PartnerInfluencedPipelineKpi,
+  PipelineValuesKpi,
   RfpTurnaroundKpi,
   RevenueByPartnerKpi,
 } from "@/types/executive";
@@ -44,6 +45,14 @@ export async function getRevenueByPartnerKpi(): Promise<
 > {
   const response = await api.get<RevenueByPartnerKpi[]>(
     `${EXECUTIVE_ENDPOINTS.KPIS}/revenue-by-partner`,
+  );
+
+  return response.data;
+}
+
+export async function getPipelineValuesKpi(): Promise<PipelineValuesKpi> {
+  const response = await api.get<PipelineValuesKpi>(
+    `${EXECUTIVE_ENDPOINTS.KPIS}/pipeline-values`,
   );
 
   return response.data;

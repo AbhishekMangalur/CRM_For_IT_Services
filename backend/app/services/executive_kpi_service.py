@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.account_director import AccountOpportunity
 from app.models.alliance import Partner, PartnerInfluencedOpportunity
 from app.models.rfp import RFP
+from app.models.sale import Opportunity
 
 
 # =========================================================
@@ -142,6 +143,54 @@ def get_revenue_by_partner_kpi(
         }
         for row in rows
     ]
+
+
+def get_pipeline_values_kpi(
+    db: Session,
+):
+    active_pipeline_value = (
+        db.query(
+            func.coalesce(
+                func.sum(Opportunity.deal_value),
+                0,
+            )
+        )
+        .filter(Opportunity.status == "OPEN")
+        .scalar()
+    )
+
+    closed_pipeline_value = (
+        db.query(
+            func.coalesce(
+                func.sum(Opportunity.deal_value),
+                0,
+            )
+        )
+        .filter(
+            Opportunity.pipeline_stage.in_(
+                ["CLOSED_WON", "CLOSED_LOST"]
+            ),
+            Opportunity.status.in_(["WON", "LOST"]),
+        )
+        .scalar()
+    )
+
+    total_pipeline_value = (
+        active_pipeline_value
+        + closed_pipeline_value
+    )
+
+    return {
+        "active_pipeline_value": float(
+            active_pipeline_value or 0
+        ),
+        "closed_pipeline_value": float(
+            closed_pipeline_value or 0
+        ),
+        "total_pipeline_value": float(
+            total_pipeline_value or 0
+        ),
+    }
 
 
 # =========================================================
@@ -292,9 +341,14 @@ def get_partner_influenced_pipeline_kpi(
                 0,
             )
         )
+        .join(
+            Opportunity,
+            PartnerInfluencedOpportunity.opportunity_id
+            == Opportunity.id,
+        )
         .filter(
-            PartnerInfluencedOpportunity.status
-            == "ACTIVE"
+            PartnerInfluencedOpportunity.status == "ACTIVE",
+            Opportunity.status == "OPEN",
         )
         .scalar()
     )
@@ -309,9 +363,14 @@ def get_partner_influenced_pipeline_kpi(
                 0,
             )
         )
+        .join(
+            Opportunity,
+            PartnerInfluencedOpportunity.opportunity_id
+            == Opportunity.id,
+        )
         .filter(
-            PartnerInfluencedOpportunity.status
-            == "WON"
+            Opportunity.pipeline_stage == "CLOSED_WON",
+            Opportunity.status == "WON",
         )
         .scalar()
     )
@@ -322,9 +381,14 @@ def get_partner_influenced_pipeline_kpi(
                 PartnerInfluencedOpportunity.id
             )
         )
+        .join(
+            Opportunity,
+            PartnerInfluencedOpportunity.opportunity_id
+            == Opportunity.id,
+        )
         .filter(
-            PartnerInfluencedOpportunity.status
-            == "ACTIVE"
+            PartnerInfluencedOpportunity.status == "ACTIVE",
+            Opportunity.status == "OPEN",
         )
         .scalar()
     )
@@ -335,9 +399,14 @@ def get_partner_influenced_pipeline_kpi(
                 PartnerInfluencedOpportunity.id
             )
         )
+        .join(
+            Opportunity,
+            PartnerInfluencedOpportunity.opportunity_id
+            == Opportunity.id,
+        )
         .filter(
-            PartnerInfluencedOpportunity.status
-            == "WON"
+            Opportunity.pipeline_stage == "CLOSED_WON",
+            Opportunity.status == "WON",
         )
         .scalar()
     )

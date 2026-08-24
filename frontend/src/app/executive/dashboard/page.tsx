@@ -233,9 +233,7 @@ function HistorySnapshotCard({
           </p>
 
           <p className="mt-1 font-bold text-cyan-700">
-            {snapshot.gross_margin_percentage.toFixed(
-              2,
-            )}
+            {snapshot.gross_margin_percentage.toFixed(2)}
             %
           </p>
         </div>

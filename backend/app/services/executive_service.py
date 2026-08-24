@@ -217,9 +217,8 @@ def calculate_margin_kpis(
     gross_margin_percentage = 0.0
 
     if total_billing > 0:
-        gross_margin_percentage = round(
-            float(total_profit / total_billing * 100),
-            2,
+        gross_margin_percentage = float(
+            total_profit / total_billing * 100
         )
 
     pending_presales_approvals = db.scalar(
@@ -396,9 +395,14 @@ def build_snapshot_data(
                 0,
             )
         )
+        .join(
+            Opportunity,
+            PartnerInfluencedOpportunity.opportunity_id
+            == Opportunity.id,
+        )
         .filter(
-            PartnerInfluencedOpportunity.status
-            == "ACTIVE"
+            PartnerInfluencedOpportunity.status == "ACTIVE",
+            Opportunity.status == "OPEN",
         )
         .scalar()
     )

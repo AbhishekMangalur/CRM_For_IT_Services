@@ -526,7 +526,7 @@ function EmployeeSkillFormModal({
                 step="0.5"
                 value={form.experience_years}
                 onChange={handleChange}
-                placeholder="4"
+                placeholder="0"
                 required
               />
             </div>

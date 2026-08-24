@@ -58,27 +58,41 @@ def get_financial_summary(
         else Decimal("0")
     )
 
-    projected_records = [
-        record
+    estimation_ids = {
+        record.estimation_id
         for record in records
-        if record.projected_margin_percentage is not None
-        and record.actual_revenue > 0
-    ]
-    projected_revenue = sum(
-        (record.actual_revenue for record in projected_records),
+        if record.estimation_id is not None
+    }
+    projected_estimations = (
+        list(
+            db.scalars(
+                select(Estimation).where(
+                    Estimation.id.in_(estimation_ids)
+                )
+            ).all()
+        )
+        if estimation_ids
+        else []
+    )
+    projected_billing = sum(
+        (
+            estimation.billing_amount
+            for estimation in projected_estimations
+        ),
+        Decimal("0"),
+    )
+    projected_profit = sum(
+        (
+            estimation.expected_profit
+            for estimation in projected_estimations
+        ),
         Decimal("0"),
     )
     projected_margin = (
-        sum(
-            (
-                record.actual_revenue
-                * record.projected_margin_percentage
-                for record in projected_records
-            ),
-            Decimal("0"),
-        )
-        / projected_revenue
-        if projected_revenue > 0
+        projected_profit
+        / projected_billing
+        * Decimal("100")
+        if projected_billing > 0
         else None
     )
 
@@ -99,14 +113,10 @@ def get_financial_summary(
         "actual_revenue": total_revenue,
         "actual_cost": total_cost,
         "actual_profit": total_profit,
-        "actual_margin_percentage": round(actual_margin, 2),
-        "projected_margin_percentage": (
-            round(projected_margin, 2)
-            if projected_margin is not None
-            else None
-        ),
+        "actual_margin_percentage": actual_margin,
+        "projected_margin_percentage": projected_margin,
         "margin_variance": (
-            round(actual_margin - projected_margin, 2)
+            actual_margin - projected_margin
             if projected_margin is not None
             else None
         ),

@@ -102,6 +102,12 @@ export interface PartnerInfluencedPipelineKpi {
   total_tier_points: number;
 }
 
+export interface PipelineValuesKpi {
+  active_pipeline_value: number;
+  closed_pipeline_value: number;
+  total_pipeline_value: number;
+}
+
 export interface RevenueByPartnerKpi {
   partner_name: string;
   revenue: number;

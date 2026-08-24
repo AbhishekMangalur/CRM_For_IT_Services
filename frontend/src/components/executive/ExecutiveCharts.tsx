@@ -27,9 +27,13 @@ import {
 
 import type {
   ExecutiveKpiSnapshot,
+  PipelineValuesKpi,
   RevenueByPartnerKpi,
 } from "@/types/executive";
-import { getRevenueByPartnerKpi } from "@/lib/executive-api";
+import {
+  getPipelineValuesKpi,
+  getRevenueByPartnerKpi,
+} from "@/lib/executive-api";
 
 interface ExecutiveChartsProps {
   latest: ExecutiveKpiSnapshot;
@@ -79,14 +83,22 @@ export function ExecutiveCharts({
   >([]);
   const [isLoadingPartnerRevenue, setIsLoadingPartnerRevenue] =
     useState(true);
+  const [pipelineValues, setPipelineValues] =
+    useState<PipelineValuesKpi | null>(null);
 
   const loadPartnerRevenue = useCallback(async (): Promise<void> => {
     setIsLoadingPartnerRevenue(true);
 
     try {
-      setPartnerRevenue(await getRevenueByPartnerKpi());
+      const [partnerData, pipelineData] = await Promise.all([
+        getRevenueByPartnerKpi(),
+        getPipelineValuesKpi(),
+      ]);
+      setPartnerRevenue(partnerData);
+      setPipelineValues(pipelineData);
     } catch {
       setPartnerRevenue([]);
+      setPipelineValues(null);
     } finally {
       setIsLoadingPartnerRevenue(false);
     }
@@ -149,10 +161,12 @@ export function ExecutiveCharts({
     },
   ];
 
-  const partnerPipelineVsActualData = [
+  const totalPipelineVsActualData = [
     {
-      name: "Partner Influenced Pipeline",
-      value: Number(latest.partner_influenced_pipeline),
+      name: "Total Pipeline Value",
+      value:
+        pipelineValues?.total_pipeline_value
+        ?? Number(latest.total_pipeline_value),
     },
     {
       name: "Actual Revenue",
@@ -349,16 +363,16 @@ export function ExecutiveCharts({
         <Card className="rounded-2xl border-orange-100 bg-white/90 shadow-lg shadow-orange-100/30">
           <CardHeader className="border-b border-orange-50">
             <CardTitle className="text-lg font-bold text-slate-800">
-              Partner Influenced Pipeline vs Actual Revenue
+              Total Pipeline Value vs Actual Revenue
             </CardTitle>
             <p className="text-sm text-slate-500">
-              Current partner-influenced pipeline compared with imported actual revenue.
+              Active and closed pipeline values combined, compared with imported actual revenue.
             </p>
           </CardHeader>
           <CardContent className="p-5">
             <div className="h-[340px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={partnerPipelineVsActualData} layout="vertical">
+                <BarChart data={totalPipelineVsActualData} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" tickFormatter={formatFullNumber} tickLine={false} axisLine={false} />
                   <YAxis type="category" dataKey="name" width={125} tickLine={false} axisLine={false} />
