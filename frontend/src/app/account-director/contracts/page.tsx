@@ -730,7 +730,7 @@ function ContractDetailsModal({
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
-              Contract #{contract.id}
+              {account?.account_name ?? "Account details unavailable"}
             </p>
           </div>
 
@@ -764,8 +764,7 @@ function ContractDetailsModal({
             </p>
 
             <p className="mt-2 text-xl font-bold text-indigo-700">
-              {account?.account_name ??
-                `Account #${contract.account_id}`}
+              {account?.account_name ?? "Account details unavailable"}
             </p>
           </div>
 
