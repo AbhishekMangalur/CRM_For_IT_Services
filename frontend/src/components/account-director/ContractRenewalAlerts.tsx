@@ -113,7 +113,11 @@ export function ContractRenewalAlerts() {
     }, []);
 
   useEffect(() => {
-    void loadRenewals();
+    const timeoutId = window.setTimeout(() => {
+      void loadRenewals();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
   }, [loadRenewals]);
 
   const counts = useMemo(
