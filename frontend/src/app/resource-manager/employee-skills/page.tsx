@@ -42,6 +42,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  getAlliancePartners,
+  getPartnerCertifications,
+} from "@/lib/alliance-api";
 
 import {
   createEmployeeSkill,
@@ -59,15 +63,16 @@ import type {
   ResourceEmployee,
   ResourceSkill,
 } from "@/types/resource-manager";
+import type {
+  AlliancePartner,
+  PartnerCertification,
+} from "@/types/alliance";
 
 interface EmployeeSkillFormState {
   employee_id: string;
   skill_id: string;
   proficiency_level: ProficiencyLevel;
   experience_years: string;
-  certification_name: string;
-  certification_number: string;
-  certification_expiry_date: string;
 }
 
 interface SearchOption {
@@ -182,9 +187,6 @@ const EMPTY_FORM: EmployeeSkillFormState = {
   skill_id: "",
   proficiency_level: "INTERMEDIATE",
   experience_years: "",
-  certification_name: "",
-  certification_number: "",
-  certification_expiry_date: "",
 };
 
 function formatLabel(value: string): string {
@@ -284,15 +286,6 @@ function employeeSkillToForm(
 
     experience_years:
       employeeSkill.experience_years.toString(),
-
-    certification_name:
-      employeeSkill.certification_name ?? "",
-
-    certification_number:
-      employeeSkill.certification_number ?? "",
-
-    certification_expiry_date:
-      employeeSkill.certification_expiry_date ?? "",
   };
 }
 
@@ -312,14 +305,11 @@ function formToPayload(
     experience_years:
       Number(form.experience_years),
 
-    certification_name:
-      form.certification_name.trim() || null,
-
-    certification_number:
-      form.certification_number.trim() || null,
-
-    certification_expiry_date:
-      form.certification_expiry_date || null,
+    // Partner certifications are the single source of truth. Clear any
+    // legacy certification values previously stored on this skill mapping.
+    certification_name: null,
+    certification_number: null,
+    certification_expiry_date: null,
   };
 }
 
@@ -531,53 +521,13 @@ function EmployeeSkillFormModal({
               />
             </div>
 
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="certification_name">
-                Certification name
-              </Label>
-
-              <Input
-                id="certification_name"
-                name="certification_name"
-                value={
-                  form.certification_name
-                }
-                onChange={handleChange}
-                placeholder="AWS Certified Solutions Architect"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="certification_number">
-                Certification number
-              </Label>
-
-              <Input
-                id="certification_number"
-                name="certification_number"
-                value={
-                  form.certification_number
-                }
-                onChange={handleChange}
-                placeholder="AWS-CSA-001"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="certification_expiry_date">
-                Certification expiry
-              </Label>
-
-              <Input
-                id="certification_expiry_date"
-                name="certification_expiry_date"
-                type="date"
-                value={
-                  form.certification_expiry_date
-                }
-                onChange={handleChange}
-              />
-            </div>
+            <Alert className="border-emerald-200 bg-emerald-50 text-emerald-800 md:col-span-2">
+              <AlertDescription>
+                Certifications are managed through Alliance partner
+                certifications and displayed automatically for the selected
+                employee.
+              </AlertDescription>
+            </Alert>
           </div>
 
           <div className="sticky bottom-0 flex justify-end gap-3 border-t border-blue-100 bg-white/95 px-6 py-4">
@@ -616,6 +566,8 @@ interface EmployeeSkillDetailsModalProps {
   employeeSkill: EmployeeSkill;
   employee?: ResourceEmployee;
   skill?: ResourceSkill;
+  certifications: PartnerCertification[];
+  partners: AlliancePartner[];
   onClose: () => void;
 }
 
@@ -623,6 +575,8 @@ function EmployeeSkillDetailsModal({
   employeeSkill,
   employee,
   skill,
+  certifications,
+  partners,
   onClose,
 }: EmployeeSkillDetailsModalProps) {
   return (
@@ -709,38 +663,33 @@ function EmployeeSkillDetailsModal({
             )}
           </div>
 
-          <div className="rounded-xl border border-blue-100 p-4">
-            <p className="text-xs text-slate-500">
-              Certification
-            </p>
-
-            <p className="mt-1 font-semibold">
-              {employeeSkill.certification_name ||
-                "Not added"}
-            </p>
-          </div>
-
-          <div className="rounded-xl border border-blue-100 p-4">
-            <p className="text-xs text-slate-500">
-              Certification Number
-            </p>
-
-            <p className="mt-1 font-semibold">
-              {employeeSkill.certification_number ||
-                "Not added"}
-            </p>
-          </div>
-
           <div className="rounded-xl border border-blue-100 p-4 sm:col-span-2">
             <p className="text-xs text-slate-500">
-              Certification Expiry
+              Partner Certifications
             </p>
-
-            <p className="mt-1 font-semibold">
-              {formatDate(
-                employeeSkill.certification_expiry_date,
-              )}
-            </p>
+            {certifications.length === 0 ? (
+              <p className="mt-1 font-semibold">Not added</p>
+            ) : (
+              <div className="mt-3 space-y-3">
+                {certifications.map((certification) => (
+                  <div
+                    key={certification.id}
+                    className="rounded-lg bg-emerald-50 p-3"
+                  >
+                    <p className="font-semibold text-slate-800">
+                      {certification.certification_name}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {partners.find(
+                        (partner) => partner.id === certification.partner_id,
+                      )?.name ?? `Partner #${certification.partner_id}`}
+                      {" · "}{certification.certification_number}
+                      {" · Expires "}{formatDate(certification.expiry_date)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -760,6 +709,12 @@ export default function ResourceManagerEmployeeSkillsPage() {
 
   const [skills, setSkills] =
     useState<ResourceSkill[]>([]);
+
+  const [certifications, setCertifications] =
+    useState<PartnerCertification[]>([]);
+
+  const [partners, setPartners] =
+    useState<AlliancePartner[]>([]);
 
   const [search, setSearch] =
     useState("");
@@ -816,6 +771,8 @@ export default function ResourceManagerEmployeeSkillsPage() {
           employeeSkillRecords,
           employeeRecords,
           skillRecords,
+          certificationRecords,
+          partnerRecords,
         ] = await Promise.all([
           getEmployeeSkills({
             skip: 0,
@@ -831,6 +788,16 @@ export default function ResourceManagerEmployeeSkillsPage() {
             skip: 0,
             limit: 100,
           }),
+
+          getPartnerCertifications({
+            skip: 0,
+            limit: 500,
+          }),
+
+          getAlliancePartners({
+            skip: 0,
+            limit: 100,
+          }),
         ]);
 
         setEmployeeSkills(
@@ -839,6 +806,8 @@ export default function ResourceManagerEmployeeSkillsPage() {
 
         setEmployees(employeeRecords);
         setSkills(skillRecords);
+        setCertifications(certificationRecords);
+        setPartners(partnerRecords);
       } catch (requestError) {
         setError(
           getErrorMessage(requestError),
@@ -873,6 +842,16 @@ export default function ResourceManagerEmployeeSkillsPage() {
     );
   }
 
+  function getEmployeeCertifications(
+    employeeId: number,
+  ): PartnerCertification[] {
+    return certifications.filter(
+      (certification) =>
+        certification.employee_id === employeeId &&
+        certification.is_active,
+    );
+  }
+
   const filteredEmployeeSkills =
     useMemo(() => {
       const normalizedSearch =
@@ -894,6 +873,25 @@ export default function ResourceManagerEmployeeSkillsPage() {
                 employeeSkill.skill_id,
             );
 
+          const employeeCertifications =
+            certifications.filter(
+              (certification) =>
+                certification.employee_id ===
+                  employeeSkill.employee_id &&
+                certification.is_active,
+            );
+
+          const certificationSearchText = employeeCertifications
+            .flatMap((certification) => [
+              certification.certification_name,
+              certification.certification_number,
+              partners.find(
+                (partner) => partner.id === certification.partner_id,
+              )?.name ?? "",
+            ])
+            .join(" ")
+            .toLowerCase();
+
           const matchesSearch =
             !normalizedSearch ||
             employee?.full_name
@@ -911,11 +909,7 @@ export default function ResourceManagerEmployeeSkillsPage() {
               .includes(
                 normalizedSearch,
               ) ||
-            employeeSkill.certification_name
-              ?.toLowerCase()
-              .includes(
-                normalizedSearch,
-              );
+            certificationSearchText.includes(normalizedSearch);
 
           const matchesEmployee =
             employeeFilter === "ALL" ||
@@ -941,14 +935,18 @@ export default function ResourceManagerEmployeeSkillsPage() {
         })
         .sort((first, second) => {
           const firstHasCertification = Boolean(
-            first.certification_name ||
-              first.certification_number ||
-              first.certification_expiry_date,
+            certifications.some(
+              (certification) =>
+                certification.employee_id === first.employee_id &&
+                certification.is_active,
+            ),
           );
           const secondHasCertification = Boolean(
-            second.certification_name ||
-              second.certification_number ||
-              second.certification_expiry_date,
+            certifications.some(
+              (certification) =>
+                certification.employee_id === second.employee_id &&
+                certification.is_active,
+            ),
           );
 
           if (firstHasCertification !== secondHasCertification) {
@@ -961,19 +959,17 @@ export default function ResourceManagerEmployeeSkillsPage() {
       employeeFilter,
       employeeSkills,
       employees,
+      certifications,
+      partners,
       proficiencyFilter,
       search,
       skillFilter,
       skills,
     ]);
 
-  const certifiedSkills =
-    employeeSkills.filter(
-      (employeeSkill) =>
-        Boolean(
-          employeeSkill.certification_name,
-        ),
-    ).length;
+  const certifiedSkills = certifications.filter(
+    (certification) => certification.is_active,
+  ).length;
 
   const advancedSkills =
     employeeSkills.filter(
@@ -1368,6 +1364,14 @@ export default function ResourceManagerEmployeeSkillsPage() {
                               employeeSkill.skill_id,
                             );
 
+                          const employeeCertifications =
+                            getEmployeeCertifications(
+                              employeeSkill.employee_id,
+                            );
+
+                          const firstCertification =
+                            employeeCertifications[0];
+
                           return (
                             <tr
                               key={
@@ -1445,15 +1449,22 @@ export default function ResourceManagerEmployeeSkillsPage() {
                               <td className="px-4 py-4">
                                 <div>
                                   <p className="max-w-64 truncate text-sm font-medium text-slate-700">
-                                    {employeeSkill.certification_name ||
+                                    {firstCertification?.certification_name ||
                                       "No certification"}
                                   </p>
 
-                                  {employeeSkill.certification_number && (
+                                  {firstCertification && (
                                     <p className="mt-1 text-xs text-slate-500">
-                                      {
-                                        employeeSkill.certification_number
-                                      }
+                                      {partners.find(
+                                        (partner) =>
+                                          partner.id ===
+                                          firstCertification.partner_id,
+                                      )?.name ??
+                                        `Partner #${firstCertification.partner_id}`}
+                                      {" · "}
+                                      {firstCertification.certification_number}
+                                      {employeeCertifications.length > 1 &&
+                                        ` · +${employeeCertifications.length - 1} more`}
                                     </p>
                                   )}
                                 </div>
@@ -1461,7 +1472,7 @@ export default function ResourceManagerEmployeeSkillsPage() {
 
                               <td className="px-4 py-4 text-sm text-slate-600">
                                 {formatDate(
-                                  employeeSkill.certification_expiry_date,
+                                  firstCertification?.expiry_date ?? null,
                                 )}
                               </td>
 
@@ -1559,6 +1570,10 @@ export default function ResourceManagerEmployeeSkillsPage() {
             skill={findSkill(
               viewingEmployeeSkill.skill_id,
             )}
+            certifications={getEmployeeCertifications(
+              viewingEmployeeSkill.employee_id,
+            )}
+            partners={partners}
             onClose={() =>
               setViewingEmployeeSkill(
                 null,

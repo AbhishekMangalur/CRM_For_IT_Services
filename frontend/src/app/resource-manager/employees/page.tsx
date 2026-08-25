@@ -1425,7 +1425,7 @@ export default function ResourceManagerEmployeesPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto rounded-xl border border-blue-100">
-                  <table className="w-full min-w-[1450px] text-left">
+                  <table className="w-full min-w-[1580px] text-left">
                     <thead className="bg-blue-50/80 text-xs uppercase tracking-wide text-slate-500">
                       <tr>
                         <th className="px-4 py-3">
@@ -1454,6 +1454,10 @@ export default function ResourceManagerEmployeesPage() {
 
                         <th className="px-4 py-3">
                           Availability
+                        </th>
+
+                        <th className="px-4 py-3">
+                          Available From
                         </th>
 
                         <th className="px-4 py-3">
@@ -1547,6 +1551,12 @@ export default function ResourceManagerEmployeesPage() {
                                   employee.availability_status,
                                 )}
                               </Badge>
+                            </td>
+
+                            <td className="px-4 py-4 text-sm font-medium text-slate-700">
+                              {formatDate(
+                                employee.available_from,
+                              )}
                             </td>
 
                             <td className="px-4 py-4">
