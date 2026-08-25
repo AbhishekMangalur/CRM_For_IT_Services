@@ -931,6 +931,34 @@ export default function AccountDirectorContractsPage() {
     return () => window.clearTimeout(timeoutId);
   }, [loadData]);
 
+  useEffect(() => {
+    if (isLoading) {
+      return;
+    }
+
+    const contractId = Number(
+      new URLSearchParams(window.location.search).get("view"),
+    );
+
+    if (!Number.isInteger(contractId) || contractId <= 0) {
+      return;
+    }
+
+    const requestedContract = contracts.find(
+      (contract) => contract.id === contractId,
+    );
+
+    const timeoutId = window.setTimeout(() => {
+      if (requestedContract) {
+        setViewingContract(requestedContract);
+      } else {
+        setError(`Contract #${contractId} was not found.`);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [contracts, isLoading]);
+
   const filteredContracts = useMemo(() => {
     const normalizedSearch =
       search.trim().toLowerCase();
@@ -1559,9 +1587,17 @@ export default function AccountDirectorContractsPage() {
             account={findAccount(
               viewingContract.account_id,
             )}
-            onClose={() =>
-              setViewingContract(null)
-            }
+            onClose={() => {
+              setViewingContract(null);
+
+              const url = new URL(window.location.href);
+              url.searchParams.delete("view");
+              window.history.replaceState(
+                null,
+                "",
+                `${url.pathname}${url.search}${url.hash}`,
+              );
+            }}
           />
         )}
       </DashboardLayout>

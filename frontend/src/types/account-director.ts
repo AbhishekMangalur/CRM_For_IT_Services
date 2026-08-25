@@ -228,6 +228,7 @@ export type ContractRenewalAlertLevel =
 export interface ContractRenewalAlert {
   contract_id: number;
   account_id: number;
+  account_name: string;
 
   contract_number: string;
   contract_value: string;

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 class ContractRenewalAlertResponse(BaseModel):
     contract_id: int
     account_id: int
+    account_name: str
     contract_number: str
     contract_value: Decimal
     currency: Literal["USD"]

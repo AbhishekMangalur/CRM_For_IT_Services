@@ -1,7 +1,7 @@
 from datetime import date
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.models.account_director import Contract
 
@@ -12,9 +12,9 @@ def get_upcoming_contract_renewals(
     today = date.today()
 
     contracts = db.scalars(
-        select(Contract).where(
-            Contract.contract_status == "ACTIVE"
-        )
+        select(Contract)
+        .options(joinedload(Contract.account))
+        .where(Contract.contract_status == "ACTIVE")
     ).all()
 
     alerts = []
@@ -54,6 +54,7 @@ def get_upcoming_contract_renewals(
             {
                 "contract_id": contract.id,
                 "account_id": contract.account_id,
+                "account_name": contract.account.account_name,
                 "contract_number": contract.contract_number,
                 "contract_value": contract.contract_value,
                 "currency": contract.currency,

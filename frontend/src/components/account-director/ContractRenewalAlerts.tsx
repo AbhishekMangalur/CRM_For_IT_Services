@@ -284,8 +284,7 @@ export function ContractRenewalAlerts() {
                       </td>
 
                       <td className="p-3">
-                        Account #
-                        {renewal.account_id}
+                        {renewal.account_name}
                       </td>
 
                       <td className="p-3">
@@ -322,7 +321,7 @@ export function ContractRenewalAlerts() {
                           variant="outline"
                           onClick={() =>
                             router.push(
-                              `/account-director/contracts/${renewal.contract_id}`,
+                              `/account-director/contracts?view=${renewal.contract_id}`,
                             )
                           }
                         >
