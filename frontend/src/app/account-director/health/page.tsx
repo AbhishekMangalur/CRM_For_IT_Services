@@ -1481,7 +1481,7 @@ export default function AccountDirectorHealthPage() {
               </div>
 
               <div className="space-y-5 p-5">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="rounded-xl bg-blue-50 p-4">
                     <p className="text-xs text-slate-500">Rows processed</p>
                     <p className="mt-1 text-2xl font-bold text-blue-700">
@@ -1498,6 +1498,12 @@ export default function AccountDirectorHealthPage() {
                     <p className="text-xs text-slate-500">Records created</p>
                     <p className="mt-1 text-2xl font-bold text-cyan-700">
                       {importResult.records_created}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50 p-4">
+                    <p className="text-xs text-slate-500">Unchanged / skipped</p>
+                    <p className="mt-1 text-2xl font-bold text-amber-700">
+                      {importResult.records_skipped}
                     </p>
                   </div>
                   <div className="rounded-xl bg-red-50 p-4">

@@ -1170,7 +1170,7 @@ export default function ExecutiveDashboardPage() {
               </div>
 
               <div className="space-y-5 p-5">
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                   <div className="rounded-xl bg-blue-50 p-4">
                     <p className="text-xs text-slate-500">Rows processed</p>
                     <p className="mt-1 text-2xl font-bold text-blue-700">
@@ -1178,9 +1178,21 @@ export default function ExecutiveDashboardPage() {
                     </p>
                   </div>
                   <div className="rounded-xl bg-emerald-50 p-4">
-                    <p className="text-xs text-slate-500">Imported</p>
+                    <p className="text-xs text-slate-500">Created</p>
                     <p className="mt-1 text-2xl font-bold text-emerald-700">
                       {financialImportResult.records_created}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-cyan-50 p-4">
+                    <p className="text-xs text-slate-500">Updated</p>
+                    <p className="mt-1 text-2xl font-bold text-cyan-700">
+                      {financialImportResult.records_updated}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50 p-4">
+                    <p className="text-xs text-slate-500">Unchanged / skipped</p>
+                    <p className="mt-1 text-2xl font-bold text-amber-700">
+                      {financialImportResult.records_skipped}
                     </p>
                   </div>
                   <div className="rounded-xl bg-red-50 p-4">

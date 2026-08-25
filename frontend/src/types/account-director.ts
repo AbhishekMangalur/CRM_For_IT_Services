@@ -194,6 +194,7 @@ export interface CustomerHealthImportResult {
   rows_processed: number;
   records_updated: number;
   records_created: number;
+  records_skipped: number;
   failed_rows: number;
   errors: CustomerHealthImportError[];
 }

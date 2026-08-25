@@ -90,6 +90,7 @@ export interface EmployeeImportResult {
   rows_processed: number;
   employees_created: number;
   employees_updated: number;
+  employees_skipped: number;
   failed_rows: number;
   errors: EmployeeImportError[];
 }

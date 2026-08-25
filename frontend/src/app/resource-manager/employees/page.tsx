@@ -1694,7 +1694,7 @@ export default function ResourceManagerEmployeesPage() {
               </div>
 
               <div className="space-y-5 p-5">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                   <div className="rounded-xl bg-blue-50 p-4">
                     <p className="text-xs text-slate-500">Rows processed</p>
                     <p className="mt-1 text-2xl font-bold text-blue-700">
@@ -1711,6 +1711,12 @@ export default function ResourceManagerEmployeesPage() {
                     <p className="text-xs text-slate-500">Employees updated</p>
                     <p className="mt-1 text-2xl font-bold text-cyan-700">
                       {importResult.employees_updated}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-amber-50 p-4">
+                    <p className="text-xs text-slate-500">Unchanged / skipped</p>
+                    <p className="mt-1 text-2xl font-bold text-amber-700">
+                      {importResult.employees_skipped}
                     </p>
                   </div>
                   <div className="rounded-xl bg-red-50 p-4">

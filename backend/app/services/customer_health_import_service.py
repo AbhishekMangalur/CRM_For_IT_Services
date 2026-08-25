@@ -9,6 +9,7 @@ from app.models.account_director import (
     Account,
     CustomerHealthRecord,
 )
+from app.services.csv_row_hash import generate_row_hash
 
 
 REQUIRED_COLUMNS = {
@@ -182,6 +183,7 @@ def import_customer_health_csv(
     rows_processed = 0
     records_updated = 0
     records_created = 0
+    records_skipped = 0
     failed_rows = 0
 
     errors = []
@@ -314,6 +316,21 @@ def import_customer_health_csv(
                 )
             )
 
+            incoming_row_hash = generate_row_hash(
+                {
+                    "account_id": account_id,
+                    "delivery_score": delivery_score,
+                    "customer_satisfaction_score": customer_satisfaction_score,
+                    "sla_score": sla_score,
+                    "financial_score": financial_score,
+                    "risk_reason": risk_reason,
+                }
+            )
+
+            if health_record and health_record.row_hash == incoming_row_hash:
+                records_skipped += 1
+                continue
+
             # =============================================
             # UPDATE existing record
             # =============================================
@@ -346,6 +363,8 @@ def import_customer_health_csv(
                 health_record.risk_reason = (
                     risk_reason
                 )
+
+                health_record.row_hash = incoming_row_hash
 
                 records_updated += 1
 
@@ -383,6 +402,8 @@ def import_customer_health_csv(
                         risk_reason=(
                             risk_reason
                         ),
+
+                        row_hash=incoming_row_hash,
                     )
                 )
 
@@ -440,6 +461,9 @@ def import_customer_health_csv(
 
         "records_created":
             records_created,
+
+        "records_skipped":
+            records_skipped,
 
         "failed_rows":
             failed_rows,

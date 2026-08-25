@@ -51,6 +51,8 @@ export interface FinancialImportResult {
   message: string;
   rows_processed: number;
   records_created: number;
+  records_updated: number;
+  records_skipped: number;
   failed_rows: number;
   errors: FinancialImportError[];
 }

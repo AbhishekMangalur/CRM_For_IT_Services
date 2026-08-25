@@ -325,6 +325,11 @@ class CustomerHealthRecord(Base):
         nullable=True,
     )
 
+    row_hash: Mapped[str | None] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+
     recorded_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

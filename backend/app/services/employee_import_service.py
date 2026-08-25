@@ -17,6 +17,7 @@ from app.models.resource_manager import (
     EmployeeSkill,
     Skill,
 )
+from app.services.csv_row_hash import generate_row_hash
 
 
 REQUIRED_COLUMNS = {
@@ -572,6 +573,7 @@ def import_employees_from_csv(
 
     employees_created = 0
     employees_updated = 0
+    employees_skipped = 0
 
     skills_created = 0
 
@@ -820,6 +822,32 @@ def import_employees_from_csv(
                         row["is_active"]
                     ),
             }
+
+            hash_data = {
+                **employee_data,
+                "skills": sorted(
+                    parsed_skills,
+                    key=lambda item: (
+                        item["name"].casefold(),
+                        item["proficiency_level"],
+                    ),
+                ),
+                "certifications": sorted(
+                    parsed_certifications,
+                    key=lambda item: (
+                        item["partner_name"].casefold(),
+                        item["certification_name"].casefold(),
+                        item["certification_number"] or "",
+                    ),
+                ),
+            }
+            incoming_row_hash = generate_row_hash(hash_data)
+
+            if employee is not None and employee.row_hash == incoming_row_hash:
+                employees_skipped += 1
+                continue
+
+            employee_data["row_hash"] = incoming_row_hash
 
             # =============================================
             # CREATE / UPDATE EMPLOYEE
@@ -1114,6 +1142,9 @@ def import_employees_from_csv(
 
         "employees_updated":
             employees_updated,
+
+        "employees_skipped":
+            employees_skipped,
 
         "skills_created":
             skills_created,

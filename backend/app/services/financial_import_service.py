@@ -11,6 +11,7 @@ from app.models.account_director import Account, Contract
 from app.models.financial import FinancialActual
 from app.models.presale import Estimation
 from app.models.sale import Opportunity
+from app.services.csv_row_hash import generate_row_hash
 
 
 REQUIRED_COLUMNS = {
@@ -366,6 +367,7 @@ def import_financial_actuals_csv(
     rows_processed = 0
     records_created = 0
     records_updated = 0
+    records_skipped = 0
     failed_rows = 0
 
     errors = []
@@ -664,6 +666,27 @@ def import_financial_actuals_csv(
                 )
             )
 
+            incoming_row_hash = generate_row_hash(
+                {
+                    "opportunity_id": opportunity_id,
+                    "account_id": account_id,
+                    "contract_id": contract_id,
+                    "estimation_id": estimation_id,
+                    "billing_milestone": billing_milestone,
+                    "milestone_date": milestone_date,
+                    "actual_revenue": actual_revenue,
+                    "actual_cost": actual_cost,
+                    "timesheet_utilization_percentage": utilization,
+                    "currency": currency,
+                    "notes": notes,
+                    "projected_margin_percentage": projected_margin_percentage,
+                }
+            )
+
+            if existing_record and existing_record.row_hash == incoming_row_hash:
+                records_skipped += 1
+                continue
+
             # =============================================
             # UPDATE
             # =============================================
@@ -717,6 +740,8 @@ def import_financial_actuals_csv(
                 existing_record.notes = (
                     notes
                 )
+
+                existing_record.row_hash = incoming_row_hash
 
                 records_updated += 1
 
@@ -790,6 +815,8 @@ def import_financial_actuals_csv(
                     notes=(
                         notes
                     ),
+
+                    row_hash=incoming_row_hash,
                 )
 
                 db.add(
@@ -847,6 +874,9 @@ def import_financial_actuals_csv(
 
         "records_updated":
             records_updated,
+
+        "records_skipped":
+            records_skipped,
 
         "failed_rows":
             failed_rows,
