@@ -15,9 +15,13 @@ from app.models.alliance import (
 from app.models.resource_manager import (
     Employee,
     EmployeeSkill,
+    ResourceAllocation,
     Skill,
 )
 from app.services.csv_row_hash import generate_row_hash
+from app.services.resource_manager_service import (
+    synchronize_employee_availability,
+)
 
 
 REQUIRED_COLUMNS = {
@@ -1077,6 +1081,20 @@ def import_employees_from_csv(
             # Employee + Skills + Mapping +
             # Certifications all succeed together.
             # =============================================
+
+            active_allocation_count = db.scalar(
+                select(func.count(ResourceAllocation.id)).where(
+                    ResourceAllocation.employee_id == employee.id,
+                    ResourceAllocation.allocation_status.in_(
+                        {"PENDING", "CONFIRMED"},
+                    ),
+                )
+            ) or 0
+            if active_allocation_count:
+                synchronize_employee_availability(
+                    db,
+                    employee.id,
+                )
 
             db.commit()
 

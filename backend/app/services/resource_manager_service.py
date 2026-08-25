@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -1020,6 +1020,10 @@ def validate_resource_allocation_relations(
         start_date is not None
         and employee.available_from is not None
         and start_date < employee.available_from
+        and (
+            existing_allocation is None
+            or existing_allocation.employee_id != employee.id
+        )
     ):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -1084,6 +1088,56 @@ def update_employee_utilization(
         employee.availability_status = "PARTIALLY_AVAILABLE"
     else:
         employee.availability_status = "AVAILABLE"
+
+
+def synchronize_employee_availability(
+    db: Session,
+    employee_id: int,
+    as_of: date | None = None,
+) -> Employee:
+    """Recalculate availability from active allocations."""
+    effective_date = as_of or date.today()
+    employee = require_employee(db, employee_id)
+    active_allocations = list(
+        db.scalars(
+            select(ResourceAllocation).where(
+                ResourceAllocation.employee_id == employee_id,
+                ResourceAllocation.allocation_status.in_(
+                    {"PENDING", "CONFIRMED"},
+                ),
+            )
+        ).all()
+    )
+    employee.current_utilization_percentage = min(
+        100,
+        sum(
+            allocation.allocation_percentage
+            for allocation in active_allocations
+        ),
+    )
+
+    if employee.current_utilization_percentage >= 100:
+        employee.availability_status = "ALLOCATED"
+        ending_dates = [
+            allocation.end_date
+            for allocation in active_allocations
+            if allocation.end_date is not None
+        ]
+        # Allocation end dates are inclusive. Capacity is available the day
+        # after the first active allocation finishes.
+        employee.available_from = (
+            min(ending_dates) + timedelta(days=1)
+            if ending_dates
+            else None
+        )
+    elif employee.current_utilization_percentage > 0:
+        employee.availability_status = "PARTIALLY_AVAILABLE"
+        employee.available_from = effective_date
+    else:
+        employee.availability_status = "AVAILABLE"
+        employee.available_from = effective_date
+
+    return employee
 
 
 def synchronize_linked_requirement_allocation_status(
@@ -1165,33 +1219,11 @@ def complete_expired_resource_allocations(
     db.flush()
 
     for employee_id in employee_ids:
-        employee = require_employee(db, employee_id)
-        active_utilization = db.scalar(
-            select(
-                func.coalesce(
-                    func.sum(ResourceAllocation.allocation_percentage),
-                    0,
-                )
-            ).where(
-                ResourceAllocation.employee_id == employee_id,
-                ResourceAllocation.allocation_status.in_(
-                    {"PENDING", "CONFIRMED"},
-                ),
-            )
+        synchronize_employee_availability(
+            db,
+            employee_id,
+            as_of=effective_date,
         )
-        employee.current_utilization_percentage = min(
-            100,
-            float(active_utilization or 0),
-        )
-
-        if employee.current_utilization_percentage >= 100:
-            employee.availability_status = "ALLOCATED"
-        elif employee.current_utilization_percentage > 0:
-            employee.availability_status = "PARTIALLY_AVAILABLE"
-            employee.available_from = effective_date
-        else:
-            employee.availability_status = "AVAILABLE"
-            employee.available_from = effective_date
 
     for resource_request_id in resource_request_ids:
         synchronize_linked_requirement_allocation_status(
@@ -1228,6 +1260,10 @@ def create_resource_allocation(
         )
 
         db.flush()
+        synchronize_employee_availability(
+            db,
+            employee.id,
+        )
         synchronize_linked_requirement_allocation_status(
             db,
             data.get("resource_request_id"),
@@ -1333,6 +1369,15 @@ def update_resource_allocation(
             setattr(allocation, field_name, value)
 
         db.flush()
+        synchronize_employee_availability(
+            db,
+            old_employee.id,
+        )
+        if new_employee.id != old_employee.id:
+            synchronize_employee_availability(
+                db,
+                new_employee.id,
+            )
         synchronize_linked_requirement_allocation_status(
             db,
             old_resource_request_id,
@@ -1374,6 +1419,10 @@ def delete_resource_allocation(
 
         db.delete(allocation)
         db.flush()
+        synchronize_employee_availability(
+            db,
+            employee.id,
+        )
         synchronize_linked_requirement_allocation_status(
             db,
             resource_request_id,

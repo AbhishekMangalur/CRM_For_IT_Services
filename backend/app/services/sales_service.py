@@ -21,6 +21,7 @@ from app.repositories.sales_repository import (
     update_record,
 )
 from app.services.resource_manager_service import (
+    synchronize_employee_availability,
     synchronize_linked_requirement_allocation_status,
     update_employee_utilization,
 )
@@ -287,6 +288,15 @@ def synchronize_bookings_for_opportunity_outcome(
 
     if is_lost:
         db.flush()
+        affected_employee_ids = {
+            allocation.employee_id
+            for allocation in linked_allocations
+        }
+        for employee_id in affected_employee_ids:
+            synchronize_employee_availability(
+                db,
+                employee_id,
+            )
         for resource_request_id in affected_resource_request_ids:
             synchronize_linked_requirement_allocation_status(
                 db,
