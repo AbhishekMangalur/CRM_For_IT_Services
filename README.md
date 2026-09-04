@@ -2,6 +2,10 @@
 
 This repository contains the CRM frontend and backend in one project.
 
+<h2>CRM For IT Services: <a href="https://crm-frontend.fleet.binihost.com/login" target="_blank">
+  <u>Live Server</u>
+</a></h2>
+
 ## Structure
 
 - `backend/` — FastAPI API
